@@ -153,6 +153,23 @@ table th{background:#f1f5f9}
 .reg-row{display:flex;gap:8px;justify-content:center;margin-top:10px;flex-wrap:wrap}
 .reg-chip{background:var(--bg);border-radius:6px;padding:6px 10px;font-size:11px;font-family:monospace}
 .reg-chip b{color:var(--pri)}
+/* 寄存器实时映射 */
+.reg-map{margin-top:14px;padding-top:14px;border-top:1px dashed var(--line)}
+.reg-map-title{font-size:13px;font-weight:600;color:var(--txt);margin-bottom:4px}
+.reg-map-sub{font-size:11px;color:var(--sub);margin-bottom:6px}
+.pin-grid{display:grid;grid-template-columns:repeat(8,1fr);gap:4px}
+.pin-cell{display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 2px;border-radius:5px;background:var(--bg);transition:all .25s;font-family:monospace}
+.pin-cell .pin-num{font-size:9px;color:var(--sub)}
+.pin-cell .pin-val{font-size:13px;font-weight:700;line-height:1}
+.pin-cell.odr-0{background:#fee2e2;color:#991b1b}
+.pin-cell.odr-1{background:#dcfce7;color:#166534}
+.pin-cell.led-pin{outline:2px solid var(--pri);outline-offset:-1px}
+.pin-cell.moder-00{background:#f1f5f9;color:#475569}
+.pin-cell.moder-01{background:#dbeafe;color:#1e40af}
+.pin-cell.moder-10{background:#fef3c7;color:#92400e}
+.pin-cell.moder-11{background:#fce7f3;color:#9d174d}
+.pin-cell.flash{animation:pinFlash .4s ease}
+@keyframes pinFlash{0%{transform:scale(1.15);filter:brightness(1.4)}100%{transform:scale(1);filter:brightness(1)}}
 .sim-editor{width:100%;box-sizing:border-box;background:#1e293b;color:#e2e8f0;border:none;border-radius:10px;padding:12px;font-family:Consolas,'Courier New',monospace;font-size:13px;line-height:1.6;resize:vertical;min-height:180px}
 .sim-editor:focus{outline:2px solid var(--pri)}
 .sim-out{background:#0f172a;color:#4ade80;border-radius:10px;padding:12px;font-family:Consolas,monospace;font-size:12px;min-height:80px;max-height:200px;overflow:auto;white-space:pre-wrap;margin-top:8px}
@@ -431,6 +448,14 @@ body.dark .theme-toggle{background:rgba(255,255,255,.1)}
     <div class="reg-row">
       <div class="reg-chip">GPIOE->MODER = <b id="rMODER">0x00000000</b></div>
       <div class="reg-chip">GPIOE->ODR = <b id="rODR">0x00000000</b></div>
+    </div>
+    <!-- 寄存器实时映射视图 -->
+    <div class="reg-map">
+      <div class="reg-map-title">📊 寄存器实时映射（PE0~PE15）</div>
+      <div class="reg-map-sub">ODR 输出数据寄存器 · 低电平点亮 LED</div>
+      <div class="pin-grid" id="pinGridODR"></div>
+      <div class="reg-map-sub" style="margin-top:12px">MODER 模式寄存器 · 每2位控制1个引脚（00输入 01输出 10复用 11模拟）</div>
+      <div class="pin-grid" id="pinGridMODER"></div>
     </div>
   </div>
   <div class="card" style="padding:12px">
@@ -4356,6 +4381,7 @@ function showPage(id){
   if(id==='page-hal')renderHal();
   if(id==='page-interview')renderInterview();
   if(id==='page-modules')renderModules();
+  if(id==='page-sim')renderPinMap();
 }
 
 /* ========== 学习路线 ========== */
@@ -5195,6 +5221,7 @@ function resetSimHW(){
   document.getElementById('rMODER').textContent='0x'+simGPIO.MODER.toString(16).padStart(8,'0');
   document.getElementById('rODR').textContent='0x'+simGPIO.ODR.toString(16).padStart(8,'0');
   document.getElementById('simVars').innerHTML='<span class="sys">运行时变量会显示在这里</span>';
+  renderPinMap();
 }
 function simPressKey(){ simKeyPressed=true; simPrint('🔘 按键按下\n','sys'); }
 function updateLEDs(){
@@ -5205,6 +5232,68 @@ function updateLEDs(){
   document.getElementById('led2').classList.toggle('on', ds2);
   document.getElementById('rODR').textContent='0x'+simGPIO.ODR.toString(16).padStart(8,'0');
   document.getElementById('rMODER').textContent='0x'+simGPIO.MODER.toString(16).padStart(8,'0');
+  renderPinMap();
+}
+// 渲染寄存器引脚映射视图
+function renderPinMap(){
+  const odrGrid=document.getElementById('pinGridODR');
+  const moderGrid=document.getElementById('pinGridMODER');
+  if(!odrGrid||!moderGrid) return;
+  const odr=simGPIO.ODR>>>0;
+  const moder=simGPIO.MODER>>>0;
+  // ODR: 16个引脚，每位对应一个
+  let oHTML='';
+  for(let i=0;i<16;i++){
+    const bit=(odr>>i)&1;
+    const isLed=(i===5||i===6);
+    oHTML+=`<div class="pin-cell odr-${bit} ${isLed?'led-pin':''}" data-pin="${i}">
+      <div class="pin-num">PE${i}</div>
+      <div class="pin-val">${bit}</div>
+    </div>`;
+  }
+  odrGrid.innerHTML=oHTML;
+  // MODER: 每2位一组，16个引脚
+  let mHTML='';
+  const moderNames={'00':'输入','01':'输出','10':'复用','11':'模拟'};
+  for(let i=0;i<16;i++){
+    const b0=(moder>>(i*2))&1;
+    const b1=(moder>>(i*2+1))&1;
+    const code=''+b1+b0;
+    const isLed=(i===5||i===6);
+    mHTML+=`<div class="pin-cell moder-${code} ${isLed?'led-pin':''}" data-pin="${i}">
+      <div class="pin-num">PE${i}</div>
+      <div class="pin-val">${code}</div>
+    </div>`;
+  }
+  moderGrid.innerHTML=mHTML;
+}
+// 引脚闪烁动画（寄存器值变化时触发）
+function flashPins(newODR,newMODER){
+  const oldODR=simGPIO.ODR>>>0;
+  const oldMODER=simGPIO.MODER>>>0;
+  simGPIO.ODR=newODR>>>0;
+  simGPIO.MODER=newMODER>>>0;
+  // ODR变化的引脚闪烁
+  const odrGrid=document.getElementById('pinGridODR');
+  if(odrGrid){
+    for(let i=0;i<16;i++){
+      if(((oldODR>>i)&1)!==((newODR>>i)&1)){
+        const cell=odrGrid.querySelector(`[data-pin="${i}"]`);
+        if(cell){cell.classList.add('flash');setTimeout(()=>cell.classList.remove('flash'),400);}
+      }
+    }
+  }
+  // MODER变化的引脚闪烁
+  const moderGrid=document.getElementById('pinGridMODER');
+  if(moderGrid){
+    for(let i=0;i<16;i++){
+      if(((oldMODER>>(i*2))&3)!==((newMODER>>(i*2))&3)){
+        const cell=moderGrid.querySelector(`[data-pin="${i}"]`);
+        if(cell){cell.classList.add('flash');setTimeout(()=>cell.classList.remove('flash'),400);}
+      }
+    }
+  }
+  updateLEDs();
 }
 function simPrint(txt, cls){
   const span=document.createElement('span');
@@ -5759,14 +5848,19 @@ async function execExprStmt(tk,p){
 function writeReg(port, reg, val){
   const letter=port.replace('GPIO','');
   if(simPorts[letter]){
-    if(reg==='ODR'){simPorts[letter].ODR=val>>>0; if(letter==='E'){simGPIO.ODR=simPorts.E.ODR;updateLEDs();}}
-    else if(reg==='MODER'){if(letter==='E'){simGPIO.MODER=val>>>0;updateLEDs();}}
+    if(reg==='ODR'){
+      simPorts[letter].ODR=val>>>0;
+      if(letter==='E'){flashPins(simPorts.E.ODR, simGPIO.MODER);}
+    }
+    else if(reg==='MODER'){
+      if(letter==='E'){flashPins(simGPIO.ODR, val>>>0);}
+    }
     else if(reg==='BSRR'){
       val=val>>>0;
       simPorts[letter].ODR|=(val&0xFFFF);
       simPorts[letter].ODR&=~((val>>>16)&0xFFFF);
       simPorts[letter].ODR=simPorts[letter].ODR>>>0;
-      if(letter==='E'){simGPIO.ODR=simPorts.E.ODR;updateLEDs();}
+      if(letter==='E'){flashPins(simPorts.E.ODR, simGPIO.MODER);}
     }
   }
 }
