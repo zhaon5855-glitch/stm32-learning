@@ -23,6 +23,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
 .topbar h1{font-size:17px;font-weight:600;flex:1}
 .topbar .back{font-size:20px;cursor:pointer;width:28px;text-align:center}
 .topbar .act{font-size:13px;opacity:.9;cursor:pointer}
+.fs-ctrl{font-size:12px;cursor:pointer;opacity:.85;padding:2px 4px;border-radius:4px}
+.fs-ctrl:hover{background:rgba(255,255,255,.15)}
+.copy-btn{float:right;background:var(--pri);color:#fff;border:none;font-size:11px;padding:2px 10px;border-radius:4px;cursor:pointer;margin-top:-6px}
+.copy-btn:active{opacity:.7}
+pre .copy-btn{margin-bottom:6px}
 
 /* cards */
 .card{background:var(--card);border-radius:12px;padding:14px;margin:12px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
@@ -200,7 +205,7 @@ body.dark .theme-toggle{background:rgba(255,255,255,.1)}
 
 <!-- LESSON -->
 <div class="page" id="page-lesson">
-  <div class="topbar"><span class="back" onclick="backFromLesson()">‹</span><h1 id="lsTitle">课程</h1><span class="act" onclick="toggleFav()" id="favBtn">☆</span></div>
+  <div class="topbar"><span class="back" onclick="backFromLesson()">‹</span><h1 id="lsTitle">课程</h1><span class="fs-ctrl" onclick="changeFs(-1)">A-</span><span class="fs-ctrl" onclick="changeFs(0)">A</span><span class="fs-ctrl" onclick="changeFs(1)">A+</span><span class="act" onclick="toggleFav()" id="favBtn">☆</span></div>
   <div class="lesson-body"><div id="lessonContent"></div></div>
 </div>
 
@@ -253,6 +258,15 @@ body.dark .theme-toggle{background:rgba(255,255,255,.1)}
     <button class="checkin-btn" id="checkinBtn" onclick="doCheckin()">今日打卡</button>
     <div class="streak" id="streakText">连续打卡 0 天 🔥</div>
     <div class="cal-grid" id="calGrid"></div>
+  </div>
+  <div class="card">
+    <h3>🍅 番茄钟</h3>
+    <div style="text-align:center;font-size:36px;font-weight:bold;font-family:Consolas,monospace;margin:8px 0" id="pomoTime">25:00</div>
+    <div style="display:flex;gap:8px;justify-content:center">
+      <button class="btn" id="pomoStart" onclick="pomoToggle()">开始</button>
+      <button class="btn ghost" onclick="pomoReset()">重置</button>
+    </div>
+    <div style="text-align:center;font-size:12px;color:var(--sub);margin-top:6px">今日番茄：<span id="pomoToday">0</span> 个</div>
   </div>
   <div class="card">
     <h3>📊 学习报告</h3>
@@ -718,9 +732,105 @@ static int cnt = 0;  // 局部static：函数退出不消失，只初始化一�
 typedef unsigned char u8;  // u8就是unsigned char的别名
 u8 x = 100;          // 等价 unsigned char x=100</code></pre>
 <div class="warn-box">⚠️ <b>static的两个含义：</b>①修饰局部变量=只初始化一次，值保留 ②修饰全局变量/函数=只在本文件可见，其他文件不能用。</div>
+`},
+ {id:'3-15',title:'3.15 联合体union与枚举enum',kp:['union所有成员共用同一块内存','union大小=最大成员大小','enum是给整数起名字，提高可读性','enum默认从0开始递增'],content:`
+<h3>union联合体：共用一块内存</h3>
+<p>和struct不同，union的所有成员<b>共用同一块内存</b>，union大小等于最大成员的大小。</p>
+<pre><code>union Data
+{
+    int   i;     // 4字节
+    char  c[4];  // 4字节
+    float f;     // 4字节
+};  // 整个union只占4字节！
+
+union Data d;
+d.i = 0x41424344;
+printf("%c", d.c[0]);  // 可以按字节访问同一个内存
+// 小端模式下输出D（0x44）</code></pre>
+<div class="kp"><b>嵌入式用途：</b>union常用来拆字节——比如把一个32位整数拆成4个字节发送，或者把收到的4个字节拼成一个整数。</div>
+<h3>enum枚举：给整数起名字</h3>
+<pre><code>enum Color { RED, GREEN, BLUE };
+// RED=0, GREEN=1, BLUE=2
+
+enum State { IDLE=10, RUN=20, STOP=30 };
+enum State s = RUN;
+
+if(s == RUN) { /* ... */ }</code></pre>
+<div class="kp"><b>好处：</b>比直接写数字可读性强。<code>if(state==RUN)</code> 比 <code>if(state==20)</code> 清楚多了。</div>
+`},
+ {id:'3-16',title:'3.16 指针进阶',kp:['指针数组=数组里存的都是指针','多级指针=指向指针的指针','函数指针=存函数地址的指针','void*万能指针可以指向任意类型'],content:`
+<h3>指针数组：装指针的数组</h3>
+<pre><code>// 数组里每个元素都是char*指针
+char *names[3] = {"STM32", "Arduino", "ESP32"};
+printf("%s", names[0]);  // STM32</code></pre>
+<h3>多级指针：指向指针的指针</h3>
+<pre><code>int a = 5;
+int *p = &amp;a;       // p指向a
+int **pp = &amp;p;      // pp指向p
+
+printf("%d", **pp); // 5：pp→p→a
+**pp = 10;          // a变成10</code></pre>
+<h3>函数指针：存函数地址</h3>
+<pre><code>// 函数指针类型：返回值 (*指针名)(参数类型)
+int add(int a, int b){ return a+b; }
+
+int (*fp)(int, int) = add;  // fp指向add函数
+int c = fp(3, 5);           // 等价于add(3,5)=8</code></pre>
+<div class="kp"><b>嵌入式用途：</b>函数指针用来做<b>回调函数</b>——中断发生时调用你注册的函数。FreeRTOS、HAL库里到处都是函数指针。</div>
+<h3>void* 万能指针</h3>
+<pre><code>void *p;          // 可以指向任意类型
+p = &amp;a;            // 指向int
+p = &amp;f;            // 指向float都行
+// 但用之前必须强转：*(int*)p</code></pre>
+`},
+ {id:'3-17',title:'3.17 内存管理与位域',kp:['malloc动态申请内存，free释放','嵌入式内存小，少用malloc','位域可以精确到几位，省内存','栈stack和堆heap是不同的内存区'],content:`
+<h3>动态内存：malloc和free</h3>
+<pre><code>#include &lt;stdlib.h&gt;
+int *p = (int*)malloc(10 * sizeof(int));  // 申请40字节
+if(p == NULL) { /* 申请失败，内存不够 */ }
+p[0] = 100;
+free(p);  // 用完必须释放！否则内存泄漏</code></pre>
+<div class="warn-box">⚠️ <b>嵌入式慎用malloc：</b>单片机RAM小（F407才192KB），malloc/free容易产生内存碎片，导致运行一段时间后申请失败。<b>能用全局变量/数组就别用malloc。</b></div>
+<h3>位域：精确到几位</h3>
+<p>结构体里可以指定某个成员只占几位，省内存：</p>
+<pre><code>struct Flag
+{
+    unsigned int run   : 1;   // 只占1位
+    unsigned int error : 1;   // 只占1位
+    unsigned int mode  : 3;   // 占3位（0~7）
+};
+struct Flag f;
+f.run = 1;
+f.mode = 5;</code></pre>
+<div class="kp"><b>嵌入式用途：</b>寄存器描述。STM32的寄存器定义就是用位域+union+struct实现的，比如GPIO的MODER每2位控制一个引脚。</div>
+`},
+ {id:'3-18',title:'3.18 环形缓冲区（串口必备）',kp:['环形缓冲区=循环数组，适合收发数据','用头尾两个指针管理','满了覆盖还是丢数据看策略','DMA+空闲中断+环形缓冲=标准串口接收'],content:`
+<h3>为什么需要环形缓冲区</h3>
+<p>串口收到数据时，如果不及时取走就会被下一个覆盖。用环形缓冲区把收到的数据先存起来，主循环慢慢处理。</p>
+<h3>环形缓冲区原理</h3>
+<p>一个数组，<b>head</b>指向写入位置，<b>tail</b>指向读取位置。写一个head++，读一个tail++，到末尾绕回开头，像一个环。</p>
+<pre><code>#define BUF_SIZE 128
+uint8_t buf[BUF_SIZE];
+volatile uint16_t head = 0, tail = 0;
+
+// 写入（串口中断里调用）
+void buf_put(uint8_t c)
+{
+    buf[head] = c;
+    head = (head + 1) % BUF_SIZE;
+}
+
+// 读取（主循环里调用）
+int buf_get(uint8_t *c)
+{
+    if(head == tail) return 0;  // 空
+    *c = buf[tail];
+    tail = (tail + 1) % BUF_SIZE;
+    return 1;
+}</code></pre>
+<div class="kp"><b>经典组合：</b>DMA接收（硬件搬数据到缓冲）+ 串口空闲中断（一帧结束通知）+ 环形缓冲区（存数据等主循环处理）。这是工业级串口接收的标准方案。</div>
 `}
 ]},
-/* ===== 第4章 点灯 ===== */
 {id:4,ico:'💡',title:'第4章 点灯（GPIO输出）',desc:'RCC/MODER/BSRR三大寄存器详解',lessons:[
  {id:'4-1',title:'4.1 一个LED怎么亮（电路原理）',kp:['LED有正负极，长脚正短脚负','电流从正极流向负极才亮','你的板载LED是"低电平点亮"：引脚输出0亮，输出1灭'],content:`
 <h3>LED的工作原理</h3>
@@ -1831,6 +1941,301 @@ if(CAN->RF0R & (3<<0))  // FIFO0有数据
 }</code></pre>
 <div class="kp"><b>滤波器的作用：</b>总线上消息很多，滤波器只让你关心的ID进来，其他丢掉，省CPU。这是CAN高效的关键。</div>
 `}
+]},
+/* ===== 第25章 常用外设驱动 ===== */
+{id:25,ico:'🔌',title:'第25章 常用外设驱动实战',desc:'OLED/温度/湿度/继电器/蜂鸣器/电机',lessons:[
+ {id:'25-1',title:'25.1 OLED显示屏（I2C）',kp:['0.96寸OLED用I2C，地址0x3C或0x78','SCL接PB6/SDA接PB7或软件I2C','先初始化再显示字符/数字/汉字','字模需要取模软件生成'],content:`
+<h3>OLED是什么</h3>
+<p>0.96寸OLED是128×64像素的显示屏，用I2C通信，只要2根线就能显示文字和图形，做项目必备。</p>
+<h3>接线</h3>
+<pre>OLED VCC → 3.3V
+OLED GND → GND
+OLED SCL → PB6（I2C1_SCL）
+OLED SDA → PB7（I2C1_SDA）</pre>
+<h3>显示流程</h3>
+<ol>
+<li>初始化I2C和OLED（发命令设置显示模式）</li>
+<li>设置光标位置（页地址+列地址）</li>
+<li>发送字模数据（每个字符8×16像素）</li>
+</ol>
+<pre><code>// 显示一个字符的核心流程
+OLED_WriteCmd(0xB0);      // 设置页地址0
+OLED_WriteCmd(0x00);      // 列地址低4位
+OLED_WriteCmd(0x10);      // 列地址高4位
+for(int i=0;i&lt;16;i++)
+    OLED_WriteData(font[i]);  // 发16字节字模</code></pre>
+<div class="tip">💡 <b>字模怎么来：</b>用PCtoLCD2002取模软件，输入字符生成16进制数组，复制到代码里。汉字也是同样方法。</div>
+<div class="warn-box">⚠️ OLED有两种地址：0x3C和0x3D（8位地址），对应7位地址0x1E和0x1F。如果不亮试试另一个地址。</div>
+`},
+ {id:'25-2',title:'25.2 DS18B20温度传感器',kp:['单总线协议，只需1根数据线','DQ脚接GPIO，需要4.7K上拉电阻','时序要求严格，延时要准','转换一次温度约750ms'],content:`
+<h3>DS18B20是什么</h3>
+<p>数字温度传感器，用<b>单总线</b>（1-Wire）通信，只要1根数据线+电源+地，能测-55~125℃。</p>
+<h3>接线</h3>
+<pre>DS18B20 VCC → 3.3V
+DS18B20 GND → GND
+DS18B20 DQ  → PA0 + 4.7K上拉到3.3V</pre>
+<h3>操作流程</h3>
+<ol>
+<li><b>复位脉冲</b>：拉低DQ 480μs，释放等存在脉冲</li>
+<li><b>发ROM命令</b>：0xCC跳过ROM匹配</li>
+<li><b>发功能命令</b>：0x44启动温度转换</li>
+<li><b>等750ms</b></li>
+<li><b>读温度</b>：0xBE读9字节温度数据</li>
+</ol>
+<pre><code>// 读温度（简化）
+DS18B20_Reset();
+DS18B20_WriteByte(0xCC);  // 跳过ROM
+DS18B20_WriteByte(0x44);  // 启动转换
+Delay_ms(750);            // 等待转换
+
+DS18B20_Reset();
+DS18B20_WriteByte(0xCC);
+DS18B20_WriteByte(0xBE);  // 读温度
+uint8_t tl = DS18B20_ReadByte();
+uint8_t th = DS18B20_ReadByte();
+int16_t temp = (th&lt;&lt;8) | tl;
+float t = temp * 0.0625;   // 12位精度，0.0625℃/LSB</code></pre>
+<div class="warn-box">⚠️ <b>时序是关键：</b>单总线对时序要求严格，延时差几微秒就通信失败。用GPIO模拟时延时函数要校准。</div>
+`},
+ {id:'25-3',title:'25.3 DHT11温湿度',kp:['单总线+自定义时序，1根数据线','一次返回40位：湿度整数/小数+温度整数/小数+校验','数据0=26-28μs高电平，数据1=70μs高电平','不能频繁读，至少间隔1秒'],content:`
+<h3>DHT11是什么</h3>
+<p>国产温湿度传感器，比DS18B20多了湿度功能，便宜但精度一般（温度±2℃，湿度±5%）。</p>
+<pre><code>// 读取DHT11（简化）
+DHT11_Start();        // 主机拉低18ms再释放
+if(DHT11_Check())     // 等DHT11响应
+{
+    uint8_t buf[5];
+    for(int i=0;i&lt;5;i++) buf[i]=DHT11_ReadByte();
+    // buf[0]=湿度整数, buf[2]=温度整数
+    if(buf[0]+buf[2] == buf[4])  // 校验
+    {
+        hum = buf[0];
+        temp = buf[2];
+    }
+}</code></pre>
+<div class="kp"><b>DS18B20 vs DHT11：</b>DS18B20温度更准、可组网（每个有唯一ID）；DHT11多了湿度但精度差。做项目选DS18B20+BME280（精度高）或DHT11（便宜）。</div>
+`},
+ {id:'25-4',title:'25.4 继电器/蜂鸣器/步进电机',kp:['继电器用GPIO控制三极管驱动线圈','有源蜂鸣器给高电平就响，无源需要PWM','步进电机用ULN2003驱动，4相8拍','电机/继电器不能直接接GPIO，电流不够'],content:`
+<h3>继电器（控制高电压设备）</h3>
+<p>单片机GPIO只能输出3.3V几mA，带不动220V设备。继电器是用小电流控制大电流的开关。</p>
+<pre><code>// 继电器模块（已带光耦和驱动）直接接GPIO
+#define RELAY_PIN 0   // PA0
+GPIOA->BSRR = (1 &lt;&lt; RELAY_PIN);         // 吸合（通电）
+GPIOA->BSRR = (1 &lt;&lt; (RELAY_PIN+16));   // 断开</code></pre>
+<div class="warn-box">⚠️ <b>高压危险：</b>继电器控制220V时，强电和弱电要隔离，注意安全！新手建议先控制低压设备。</div>
+<h3>蜂鸣器</h3>
+<ul>
+<li><b>有源蜂鸣器</b>：给高电平就响，简单</li>
+<li><b>无源蜂鸣器</b>：需要PWM驱动，能发不同音调</li>
+</ul>
+<h3>步进电机（28BYJ-48 + ULN2003）</h3>
+<pre><code>// 4相8拍步进
+uint8_t step[8] = {0x01,0x03,0x02,0x06,0x04,0x0C,0x08,0x09};
+void stepper_step(uint8_t s)
+{
+    GPIOB->ODR = (GPIOB->ODR &amp; ~0xF) | step[s &amp; 0x7];
+}</code></pre>
+<div class="kp"><b>通用原则：</b>GPIO只能当"信号"，不能当"电源"。带电机、继电器、灯条等大电流设备必须加驱动电路（三极管/ULN2003/继电器模块）。</div>
+`}
+]},
+/* ===== 第26章 通信模块 ===== */
+{id:26,ico:'📡',title:'第26章 通信模块实战',desc:'蓝牙/WiFi/Modbus联网',lessons:[
+ {id:'26-1',title:'26.1 蓝牙HC-05',kp:['HC-05是串口转蓝牙模块','STM32串口接HC-05的TX/RX','默认波特率9600，AT指令改参数','手机蓝牙串口APP就能通信'],content:`
+<h3>HC-05是什么</h3>
+<p>最常用的蓝牙串口模块，把STM32的串口数据通过蓝牙发到手机。做遥控、数据传输超方便。</p>
+<h3>接线</h3>
+<pre>HC-05 VCC → 5V（HC-05工作电压5V）
+HC-05 GND → GND
+HC-05 TXD → STM32 PA3（USART2_RX）
+HC-05 RXD → STM32 PA2（USART2_TX）</pre>
+<div class="warn-box">⚠️ <b>电平注意：</b>HC-05的RXD是5V逻辑，但STM32是3.3V。STM32发3.3V给HC-05一般能识别，但HC-05发5V给STM32可能烧坏！建议在HC-05 TXD串个1K电阻或加分压。</div>
+<h3>通信就是串口</h3>
+<pre><code>// STM32发数据到手机
+printf("温度:%d\\n", temp);
+
+// 手机发数据控制LED（串口接收中断）
+void USART2_IRQHandler()
+{
+    if(USART2->SR &amp; (1<<5))
+    {
+        char c = USART2->DR;
+        if(c=='1') LED_ON;
+        if(c=='0') LED_OFF;
+    }
+}</code></pre>
+<div class="tip">💡 手机装"蓝牙串口"APP，配对HC-05（密码1234），就能收发数据了。</div>
+`},
+ {id:'26-2',title:'26.2 WiFi模块ESP8266',kp:['ESP8266通过AT指令连WiFi','STA模式连路由器，AP模式当热点','TCP/UDP透传模式直接发数据','刷固件后可独立运行Lua/Arduino'],content:`
+<h3>ESP8266是什么</h3>
+<p>串口WiFi模块，用AT指令控制，能让STM32联网。可以连家里WiFi，通过手机/电脑远程控制。</p>
+<h3>常用AT指令</h3>
+<pre><code>AT                          // 测试
+AT+CWMODE=1                 // 设为STA模式
+AT+CWJAP="WiFi名","密码"     // 连路由器
+AT+CIPMUX=0                 // 单连接
+AT+CIPSTART="TCP","ip",8080 // 连服务器
+AT+CIPSEND=5                // 发5字节
+hello                       // 数据</code></pre>
+<h3>STM32驱动</h3>
+<pre><code>// 连WiFi
+USART_SendString("AT+CWJAP=\\"MyWiFi\\",\\"123456\\"\r\n");
+// 等"OK"或"WIFI GOT IP"
+
+// 发数据到服务器
+USART_SendString("AT+CIPSEND=5\r\n");
+Delay_ms(10);
+USART_SendString("hello");</code></pre>
+<div class="kp"><b>三种玩法：</b>①透传模式当无线串口 ②连云平台（巴法云/Onenet）做远程控制 ③刷NodeMCU固件独立运行（不用STM32）。</div>
+`},
+ {id:'26-3',title:'26.3 Modbus协议',kp:['Modbus RTU用串口，工业标准','功能码03读保持寄存器，06写单个寄存器','报文=地址+功能码+数据+CRC校验','主机发请求，从机应答'],content:`
+<h3>Modbus是什么</h3>
+<p>工业领域最常用的通信协议，PLC、变频器、传感器都支持。用串口(RTU)或网口(TCP)传输。</p>
+<h3>RTU报文格式</h3>
+<pre>从机地址(1字节) + 功能码(1字节) + 数据(N字节) + CRC校验(2字节)</pre>
+<h3>读保持寄存器（功能码0x03）</h3>
+<pre><code>// 主机请求：读地址1的从机，从寄存器0开始读2个
+// [01][03][00 00][00 02][C4 0B]
+//  地址 功能 起始地址  数量   CRC
+uint8_t req[] = {0x01,0x03,0x00,0x00,0x00,0x02,0xC4,0x0B};
+USART_Send(req, 8);
+
+// 从机应答：[01][03][04][00 0A][00 14][XX XX]
+//  地址 功能 字节数 寄存器0=10 寄存器1=20 CRC</code></pre>
+<div class="kp"><b>CRC校验：</b>Modbus RTU用CRC16校验，保证数据不出错。有现成的CRC计算函数，复制就能用。</div>
+<div class="warn-box">⚠️ <b>超时处理：</b>Modbus请求后必须设超时（比如100ms没回应就重发或报错），不能死等。</div>
+`}
+]},
+/* ===== 第27章 调试与排查 ===== */
+{id:27,ico:'🐛',title:'第27章 调试与问题排查',desc:'程序不运行怎么办',lessons:[
+ {id:'27-1',title:'27.1 串口打印调试',kp:['printf重定向到串口，边走边打','用关键变量值定位问题位置','半主机模式semihosting也能printf到Keil','生产环境要去掉调试打印'],content:`
+<h3>最常用的调试方法：printf</h3>
+<p>单片机没屏幕，把printf重定向到串口，用串口助手看输出，和电脑上调试一样。</p>
+<pre><code>int fputc(int ch, FILE *f)
+{
+    while(!(USART1->SR &amp; (1<<7)));
+    USART1->DR = ch;
+    return ch;
+}
+
+// 然后就能在代码里随便printf
+printf("进入main\\n");
+printf("temp=%d, hum=%d\\n", temp, hum);
+if(error) printf("ERROR at line %d\\n", __LINE__);</code></pre>
+<div class="tip">💡 <b>__LINE__</b> 是当前行号，<b>__FILE__</b> 是当前文件名，printf里加上能精确定位问题在哪行。</div>
+<div class="warn-box">⚠️ <b>注意：</b>①Keil要勾Use MicroLIB ②printf在中断里慎用（可能阻塞）③生产环境去掉，否则影响性能。</div>
+`},
+ {id:'27-2',title:'27.2 在线调试（断点/单步）',kp:['ST-LINK支持在线调试','断点让程序停在指定行','单步执行一行一行看','观察窗口看变量值变化'],content:`
+<h3>Keil在线调试</h3>
+<p>ST-LINK不只能下载程序，还能在线调试——让程序暂停、单步执行、看变量。</p>
+<h3>基本操作</h3>
+<ol>
+<li>点击<b>Debug</b>按钮（放大镜+d）进入调试模式</li>
+<li>在行号左边点一下设<b>断点</b>（红点）</li>
+<li>运行(F5)，程序到断点会停下</li>
+<li><b>F10</b>单步跳过，<b>F11</b>单步进入函数</li>
+<li>在<b>Watch窗口</b>输入变量名看实时值</li>
+<li>在<b>寄存器窗口</b>看GPIO/USART等寄存器值</li>
+</ol>
+<div class="kp"><b>典型用法：</b>在按键检测处设断点，按一下按键看程序有没有进来、变量值对不对。比printf快多了。</div>
+`},
+ {id:'27-3',title:'27.3 HardFault排查',kp:['HardFault是严重错误，程序跑飞了','常见原因：指针越界、栈溢出、除零','看寄存器LR和PC定位出错位置','栈溢出最常见，加大栈或减少局部变量'],content:`
+<h3>HardFault是什么</h3>
+<p>程序犯了严重错误（访问非法内存、除零、栈溢出），CPU触发HardFault中断，默认死循环。表现：程序突然不跑了、灯不闪了。</p>
+<h3>常见原因</h3>
+<table>
+<tr><th>原因</th><th>怎么查</th></tr>
+<tr><td>数组越界</td><td>检查所有数组下标</td></tr>
+<tr><td>野指针</td><td>指针有没有初始化</td></tr>
+<tr><td>栈溢出</td><td>局部数组太大、递归太深</td></tr>
+<tr><td>除零</td><td>除数有没有可能为0</td></tr>
+</table>
+<h3>定位方法</h3>
+<p>在HardFault_Handler里加代码，把出错时的寄存器打印出来：</p>
+<pre><code>void HardFault_Handler()
+{
+    printf("HardFault!\\n");
+    // 看LR寄存器判断是哪个模式触发的
+    // 看PC寄存器知道在哪行代码挂的
+    while(1);
+}</code></pre>
+<div class="warn-box">⚠️ <b>90%的HardFault是栈溢出：</b>函数里声明了大数组（如 <code>uint8_t buf[1024]</code>）占满了栈。解决：改用全局变量或动态分配，或在启动文件里加大栈大小。</div>
+`},
+ {id:'27-4',title:'27.4 常见bug与排查思路',kp:['灯不亮：先查时钟再查配置再查接线','串口没输出：查波特率/接线/重定向','程序偶尔跑飞：查数组越界/未初始化变量','逻辑不对：用printf或断点一步步看'],content:`
+<h3>排查万能思路</h3>
+<ol>
+<li><b>缩小范围</b>：注释掉一半代码，看问题还在不在，二分法定位</li>
+<li><b>检查最基础的</b>：时钟开了吗？GPIO配了吗？接线对吗？</li>
+<li><b>看寄存器值</b>：调试模式看MODER/ODR等寄存器实际值和你想的一样吗</li>
+<li><b>printf大法</b>在关键位置打印变量值，看哪一步开始不对</li>
+</ol>
+<h3>常见问题速查</h3>
+<table>
+<tr><th>现象</th><th>检查</th></tr>
+<tr><td>灯完全不亮</td><td>RCC时钟开了？MODER设输出了？BSRR写对了？</td></tr>
+<tr><td>串口乱码</td><td>波特率双方一致？接线交叉？重定向写对了？</td></tr>
+<tr><td>按键没反应</td><td>IDR读对了？上拉/下拉配了？消抖加了？</td></tr>
+<tr><td>程序跑飞</td><td>数组越界？指针没初始化？栈溢出？</td></tr>
+<tr><td>编译报错</td><td>分号漏了？大括号配对？变量先声明了？</td></tr>
+</table>
+<div class="kp"><b>新手心法：</b>90%的问题是低级错误（没开时钟、接错线、下标越界）。别急着怀疑芯片或编译器，先检查自己的代码。</div>
+`}
+]},
+/* ===== 第28章 时钟系统 ===== */
+{id:28,ico:'⏱️',title:'第28章 STM32时钟系统',desc:'搞懂时钟树和SysTick',lessons:[
+ {id:'28-1',title:'28.1 时钟源与时钟树',kp:['STM32有时钟才能跑，外设时钟要单独开','时钟源：HSI内部16M/HSE外部8M/LSE 32.768K/LSI 32K','PLL把时钟倍频到168MHz','AHB/APB1/APB2是三条总线，分频不同'],content:`
+<h3>为什么有时钟系统</h3>
+<p>STM32就像一个大工厂，每个外设（GPIO/USART/TIM）都需要"心跳"（时钟）才能工作。时钟频率决定运行速度。</p>
+<h3>四个时钟源</h3>
+<table>
+<tr><th>时钟源</th><th>频率</th><th>用途</th></tr>
+<tr><td>HSI</td><td>16MHz内部</td><td>默认时钟，精度一般</td></tr>
+<tr><td>HSE</td><td>8MHz外部晶振</td><td>精度高，PLL输入</td></tr>
+<tr><td>LSE</td><td>32.768kHz</td><td>RTC实时时钟</td></tr>
+<tr><td>LSI</td><td>~32kHz内部</td><td>看门狗、RTC备选</td></tr>
+</table>
+<h3>时钟树（F407）</h3>
+<pre>HSE(8M) → PLL → SYSCLK(168M) → AHB(168M) → APB1(42M) / APB2(84M)</pre>
+<div class="kp"><b>记忆：</b>HSE是原料，PLL是倍频器（8M→168M），AHB是主干道，APB1/APB2是支路（APB1低速42M给串口2/定时器2-7，APB2高速84M给ADC/USART1/定时器1）。</div>
+`},
+ {id:'28-2',title:'28.2 SysTick精确延时',kp:['SysTick是内核自带的24位倒计时器','配置LOAD值和时钟源，启动后倒数','到0触发SysTick中断或置位COUNTFLAG','1us延时=LOAD=系统时钟/1000000-1'],content:`
+<h3>SysTick是什么</h3>
+<p>Cortex-M内核自带的24位倒计时定时器，专门用来做精确延时和操作系统心跳。比空循环延时准多了。</p>
+<h3>配置方法</h3>
+<pre><code>// 配置SysTick：168MHz时钟，1ms中断一次
+SysTick->LOAD = 168000 - 1;     // 168M/1000=168000
+SysTick->VAL  = 0;              // 清当前值
+SysTick->CTRL = (1<<2) | (1<<1) | (1<<0);  // 时钟源=AHB, 中断使能, 使能</code></pre>
+<h3>微秒级延时（查询方式）</h3>
+<pre><code>void delay_us(uint32_t us)
+{
+    SysTick->LOAD = us * 168 - 1;  // 168MHz，1us=168个时钟
+    SysTick->VAL = 0;
+    SysTick->CTRL = 5;              // 使能，不中断
+    while(!(SysTick->CTRL &amp; (1<<16)));  // 等COUNTFLAG
+    SysTick->CTRL = 0;              // 关闭
+}</code></pre>
+<div class="kp"><b>SysTick vs 空循环延时：</b>空循环延时不准（受编译器优化影响），SysTick用硬件计时精确。做协议（单总线/DHT11）必须用SysTick延时。</div>
+`},
+ {id:'28-3',title:'28.3 时钟配置实战',kp:['SystemInit()在启动时配好168MHz','改时钟要先开HSE等就绪再配PLL','SystemCoreClock变量存当前主频','修改后用SystemCoreClockUpdate()更新'],content:`
+<h3>默认时钟配置</h3>
+<p>STM32启动后调用<b>system_stm32f4xx.c</b>里的 <code>SystemInit()</code>，默认配置成168MHz：</p>
+<pre><code>// system_stm32f4xx.c 里的默认配置
+HSE = 8MHz
+PLL_M = 8, PLL_N = 336, PLL_P = 2, PLL_Q = 7
+SYSCLK = HSE / PLL_M * PLL_N / PLL_P = 8/8*336/2 = 168MHz</code></pre>
+<h3>查当前主频</h3>
+<pre><code>extern uint32_t SystemCoreClock;  // 定义在system文件
+printf("主频=%d Hz\\n", SystemCoreClock);
+// 输出：168000000</code></pre>
+<h3>外设时钟频率</h3>
+<table>
+<tr><th>总线</th><th>频率</th><th>挂的外设</th></tr>
+<tr><td>AHB</td><td>168MHz</td><td>GPIO, DMA, CRC</td></tr>
+<tr><td>APB1</td><td>42MHz</td><td>USART2/3, TIM2-7, I2C, CAN</td></tr>
+<tr><td>APB2</td><td>84MHz</td><td>USART1, ADC, TIM1, SPI1</td></tr>
+</table>
+<div class="warn-box">⚠️ <b>配外设时注意时钟：</b>USART1在APB2(84M)，USART2在APB1(42M)。算波特率时分母不一样！<code>USART_BRR = 时钟频率 / 波特率</code>。</div>
+`}
 ]}
 ];
 
@@ -1981,6 +2386,29 @@ const QZ = [
 // 补充：第24章 CAN
 {t:24,q:'CAN总线为什么抗干扰能力强？',opts:['用光纤','差分信号传输','电压高','电流大'],a:1,e:'CAN用CAN_H/CAN_L差分信号，干扰同时影响两根线，差值不变，所以抗干扰强。'},
 {t:24,q:'CAN一帧数据最多几个字节？',opts:['4字节','8字节','16字节','64字节'],a:1,e:'CAN标准数据帧最多8字节数据，超过需要分包传输。'},
+// 补充：C语言进阶 3.15-3.18
+{t:3,q:'union联合体的特点是？',opts:['各成员独立内存','所有成员共用同一块内存','只能存整数','比struct大'],a:1,e:'union所有成员共用同一块内存，大小等于最大成员的大小。'},
+{t:3,q:'enum枚举默认从几开始？',opts:['1','0','随机','用户指定'],a:1,e:'enum默认从0开始递增，也可以手动指定值。'},
+{t:3,q:'int *p[10] 是什么？',opts:['指向数组的指针','指针数组（10个指针）','10个整数','指向10个int的指针'],a:1,e:'[]优先级高于*，int *p[10]是10个int*指针组成的数组。'},
+{t:3,q:'嵌入式中malloc/free的建议是？',opts:['随便用','尽量少用，优先全局变量/数组','必须用','比全局变量好'],a:1,e:'单片机RAM小，malloc容易产生内存碎片，能用全局数组就别用动态分配。'},
+{t:3,q:'环形缓冲区用什么管理读写？',opts:['一个指针','head和tail两个指针','计数器','数组下标'],a:1,e:'环形缓冲区用head(写)和tail(读)两个指针，到末尾取模绕回开头。'},
+// 补充：第25章 外设驱动
+{t:25,q:'0.96寸OLED显示屏常用什么接口？',opts:['SPI','I2C','UART','USB'],a:1,e:'0.96寸OLED常用I2C接口，只需SCL和SDA两根线。'},
+{t:25,q:'DS18B20用什么通信协议？',opts:['I2C','SPI','单总线1-Wire','UART'],a:2,e:'DS18B20用单总线(1-Wire)协议，只需1根数据线。'},
+{t:25,q:'DS18B20转换一次温度大约需要多久？',opts:['10ms','100ms','750ms','5秒'],a:2,e:'DS18B20启动转换后需要约750ms才能读出温度。'},
+{t:25,q:'继电器/电机为什么不能直接接GPIO？',opts:['电压不够','GPIO电流太小带不动','协议不匹配','频率不够'],a:1,e:'GPIO只能输出几mA，带不动电机/继电器线圈，需要加驱动电路。'},
+// 补充：第26章 通信模块
+{t:26,q:'HC-05蓝牙模块和STM32怎么连接？',opts:['I2C','SPI','串口(UART)','USB'],a:2,e:'HC-05是串口转蓝牙模块，通过UART和STM32通信。'},
+{t:26,q:'ESP8266 WiFi模块通过什么控制？',opts:['寄存器','AT指令','I2C命令','SPI命令'],a:1,e:'ESP8266通过AT指令控制，比如AT+CWJAP连WiFi。'},
+{t:26,q:'Modbus RTU报文末尾的校验码是？',opts:['和校验','CRC16','异或校验','无校验'],a:1,e:'Modbus RTU用CRC16校验，保证数据传输不出错。'},
+// 补充：第27章 调试
+{t:27,q:'单片机printf调试需要什么？',opts:['屏幕','重定向fputc到串口','JTAG','不需要'],a:1,e:'重写fputc函数把字符发到串口，printf就能输出到串口助手。'},
+{t:27,q:'HardFault最常见的原因是？',opts:['时钟没开','栈溢出（局部数组太大）','电压不稳','温度太高'],a:1,e:'90%的HardFault是栈溢出，函数里大数组占满了栈空间。'},
+{t:27,q:'Keil在线调试中，设断点的作用是？',opts:['删除代码','让程序停在指定行','加速运行','保存代码'],a:1,e:'断点让程序运行到指定行暂停，可以查看变量和寄存器。'},
+// 补充：第28章 时钟
+{t:28,q:'STM32F407默认主频是多少？',opts:['72MHz','100MHz','168MHz','200MHz'],a:2,e:'F407默认配置HSE 8M经PLL倍频到168MHz。'},
+{t:28,q:'APB1总线的频率是多少？',opts:['168MHz','84MHz','42MHz','21MHz'],a:2,e:'APB1=42MHz（挂USART2/3、TIM2-7等），APB2=84MHz（挂USART1、ADC等）。'},
+{t:28,q:'SysTick定时器是几位的？',opts:['16位','24位','32位','64位'],a:1,e:'SysTick是Cortex-M内核自带的24位倒计时定时器。'},
 ];
 
 /* ============================================================
@@ -2076,7 +2504,32 @@ function openLesson(ci,li){
     <div class="note-saved" id="noteTip" style="display:none">✓ 已自动保存</div>`;
   html+=`<button class="btn ghost block" onclick="markDone('${l.id}')">${st.done[l.id]?'✓ 已标记完成（点击取消）':'标记本课已学 ✓'}</button>`;
   document.getElementById('lessonContent').innerHTML=html;
+  // 给每个代码块加复制按钮
+  document.querySelectorAll('#lessonContent pre').forEach(pre=>{
+    const btn=document.createElement('button');
+    btn.className='copy-btn';btn.textContent='复制';
+    btn.onclick=()=>{
+      const code=pre.querySelector('code')||pre;
+      navigator.clipboard.writeText(code.innerText).then(()=>{btn.textContent='已复制✓';setTimeout(()=>btn.textContent='复制',1500);}).catch(()=>{
+        const ta=document.createElement('textarea');ta.value=code.innerText;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();
+        btn.textContent='已复制✓';setTimeout(()=>btn.textContent='复制',1500);
+      });
+    };
+    pre.insertBefore(btn,pre.firstChild);
+  });
+  applyFs();
   showPage('page-lesson');
+}
+
+// 字体大小调节
+let fsLevel=LS.get('m_fs',1);
+function applyFs(){
+  const sizes=['13px','14px','16px','18px'];
+  document.getElementById('lessonContent').style.fontSize=sizes[fsLevel]||'14px';
+}
+function changeFs(d){
+  if(d===0)fsLevel=1;else fsLevel=Math.max(0,Math.min(3,fsLevel+d));
+  LS.set('m_fs',fsLevel);applyFs();
 }
 
 function markDone(id){
@@ -2279,7 +2732,11 @@ function updateStats(){
   document.getElementById('mFav').textContent=st.fav.length;
 }
 
-function updateMe(){updateStats();}
+function updateMe(){updateStats();
+  const pm=LS.get('m_pomo',{});
+  const t=document.getElementById('pomoToday');
+  if(t)t.textContent=pm[fmtDate(new Date())]||0;
+}
 
 function exportWrong(){
   const wrongs=Object.keys(st.qz.wrong).map(Number).sort((a,b)=>st.qz.wrong[b]-st.qz.wrong[a]);
@@ -2389,6 +2846,42 @@ function renderCheckin(){
     }
     grid.innerHTML=h;
   }
+}
+
+/* ========== 番茄钟 ========== */
+let pomoSec=25*60,pomoTimer=null,pomoRunning=false;
+function pomoTick(){
+  pomoSec--;
+  const m=String(Math.floor(pomoSec/60)).padStart(2,'0');
+  const s=String(pomoSec%60).padStart(2,'0');
+  document.getElementById('pomoTime').textContent=m+':'+s;
+  if(pomoSec<=0){
+    clearInterval(pomoTimer);pomoRunning=false;
+    document.getElementById('pomoStart').textContent='开始';
+    // 记录今日番茄
+    const today=fmtDate(new Date());
+    const pm=LS.get('m_pomo',{});
+    pm[today]=(pm[today]||0)+1;
+    LS.set('m_pomo',pm);
+    document.getElementById('pomoToday').textContent=pm[today];
+    alert('🍅 一个番茄完成！休息5分钟吧~');
+    pomoSec=25*60;
+    document.getElementById('pomoTime').textContent='25:00';
+  }
+}
+function pomoToggle(){
+  if(pomoRunning){
+    clearInterval(pomoTimer);pomoRunning=false;
+    document.getElementById('pomoStart').textContent='继续';
+  }else{
+    pomoTimer=setInterval(pomoTick,1000);pomoRunning=true;
+    document.getElementById('pomoStart').textContent='暂停';
+  }
+}
+function pomoReset(){
+  clearInterval(pomoTimer);pomoRunning=false;pomoSec=25*60;
+  document.getElementById('pomoTime').textContent='25:00';
+  document.getElementById('pomoStart').textContent='开始';
 }
 
 /* ========== 学习报告 ========== */
