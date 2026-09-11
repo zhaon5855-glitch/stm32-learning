@@ -343,10 +343,19 @@ body.dark .theme-toggle{background:rgba(255,255,255,.1)}
   </div>
   <div class="card" style="padding:12px">
     <div class="example-chips" id="exChips">
+      <span style="font-size:12px;color:var(--sub);width:100%;margin-bottom:4px">STM32硬件：</span>
       <span class="chip" onclick="loadEx('blink')">💡 LED闪烁</span>
       <span class="chip" onclick="loadEx('alt')">🔄 交替闪烁</span>
-      <span class="chip" onclick="loadEx('count')">🔢 计数输出</span>
-      <span class="chip" onclick="loadEx('bsrr')">🎯 BSRR点灯</span>
+      <span class="chip" onclick="loadEx('count')">🔢 计数</span>
+      <span class="chip" onclick="loadEx('bsrr')">🎯 BSRR</span>
+      <span style="font-size:12px;color:var(--sub);width:100%;margin:6px 0 4px">C语言基础：</span>
+      <span class="chip" onclick="loadEx('ifelse')">🔀 if/else</span>
+      <span class="chip" onclick="loadEx('swcase')">🔀 switch</span>
+      <span class="chip" onclick="loadEx('whileex')">🔁 while</span>
+      <span class="chip" onclick="loadEx('arrayex')">📦 数组</span>
+      <span class="chip" onclick="loadEx('funcex')">🔧 函数</span>
+      <span class="chip" onclick="loadEx('ptr')">👉 指针</span>
+      <span class="chip" onclick="loadEx('bitop')">⚙ 位运算</span>
     </div>
     <textarea class="sim-editor" id="simCode" spellcheck="false" placeholder="在这里写STM32风格的C代码，点击运行看效果..."></textarea>
     <div style="display:flex;gap:8px;margin-top:10px">
@@ -359,12 +368,15 @@ body.dark .theme-toggle{background:rgba(255,255,255,.1)}
     <h3>💡 模拟器支持的语法</h3>
     <p style="font-size:13px;line-height:1.8;color:var(--sub)">
       ✅ <code>int a = 5;</code> 整型变量<br>
-      ✅ <code>a = a + 1;</code> 四则运算 + - * / %<br>
-      ✅ <code>printf("a=%d\n", a);</code> 支持 %d %x %s<br>
+      ✅ <code>int a[5] = {1,2,3,4,5};</code> 数组<br>
+      ✅ <code>int *p = &a;</code> 指针 + 取地址<br>
+      ✅ <code>a = a + 1;</code> 四则/位运算<br>
+      ✅ <code>printf("a=%d\n", a);</code> 支持 %d %x %s %c<br>
       ✅ <code>GPIOE->ODR = 0x20;</code> 写寄存器<br>
-      ✅ <code>GPIOE->BSRR = 0x200000;</code> 位操作<br>
       ✅ <code>delay_ms(500);</code> 延时（毫秒）<br>
-      ✅ <code>for / while / if / else</code> 控制流<br>
+      ✅ <code>if / else / switch / for / while</code> 控制流<br>
+      ✅ <code>int add(int a,int b){...}</code> 自定义函数<br>
+      ✅ <code>return</code> <code>break</code> 流程跳转<br>
       ✅ <code>//</code> 和 <code>/* */</code> 注释
     </p>
   </div>
@@ -2999,6 +3011,9 @@ function prevCard(){cardFlipped=false;cardIdx=(cardIdx-1+CARDS.length)%CARDS.len
    ============================================================ */
 let simVars={}, simGPIO={MODER:0,ODR:0}, simOutEl, simCodeEl;
 let simStop=false, simRunBtn;
+let simFuncs={};      // 用户自定义函数 name -> {params:[], start, end}
+let simRetVal=0, simReturning=false, simBreaking=false;
+let simScopeStack=[]; // 函数调用时保存/恢复变量作用域
 
 const SIM_EXAMPLES={
 blink:`#include "stm32f4xx.h"
@@ -3063,6 +3078,165 @@ bsrr:`int main(void){
   delay_ms(300);
 
   printf("BSRR测试完成\\n");
+}`,
+ifelse:`int main(void){
+  int score = 85;
+  if(score >= 90){
+    printf("优秀 A\\n");
+  } else if(score >= 80){
+    printf("良好 B\\n");
+  } else if(score >= 60){
+    printf("及格 C\\n");
+  } else {
+    printf("不及格 D\\n");
+  }
+
+  // 逻辑运算符
+  int age = 20;
+  if(age >= 18 && age <= 60){
+    printf("成年人，年龄=%d\\n", age);
+  }
+  if(score < 60 || age < 18){
+    printf("需要特殊关注\\n");
+  } else {
+    printf("状态正常\\n");
+  }
+}`,
+swcase:`int main(void){
+  int day = 3;
+  switch(day){
+    case 1: printf("星期一\\n"); break;
+    case 2: printf("星期二\\n"); break;
+    case 3: printf("星期三\\n"); break;
+    case 4: printf("星期四\\n"); break;
+    case 5: printf("星期五\\n"); break;
+    default: printf("周末\\n");
+  }
+
+  // 不加break会贯穿(fall-through)
+  int n = 2;
+  switch(n){
+    case 1: printf("case1 ");
+    case 2: printf("case2 ");
+    case 3: printf("case3\\n"); break;
+    default: printf("other\\n");
+  }
+}`,
+whileex:`int main(void){
+  // while循环：计算1到100的和
+  int sum = 0;
+  int i = 1;
+  while(i <= 100){
+    sum = sum + i;
+    i++;
+  }
+  printf("1到100的和=%d\\n", sum);
+
+  // do-while模拟：先执行再判断
+  int j = 0;
+  while(1){
+    printf("j=%d ", j);
+    j++;
+    if(j >= 5) break;
+  }
+  printf("\\n循环结束\\n");
+}`,
+arrayex:`int main(void){
+  int arr[5] = {10, 20, 30, 40, 50};
+  int i;
+  int sum = 0;
+
+  printf("数组元素: ");
+  for(i=0; i<5; i++){
+    printf("%d ", arr[i]);
+    sum = sum + arr[i];
+  }
+  printf("\\n");
+
+  printf("总和=%d\\n", sum);
+  printf("平均值=%d\\n", sum/5);
+
+  // 修改数组元素
+  arr[0] = 100;
+  printf("修改后arr[0]=%d\\n", arr[0]);
+
+  // 找最大值
+  int max = arr[0];
+  for(i=1; i<5; i++){
+    if(arr[i] > max) max = arr[i];
+  }
+  printf("最大值=%d\\n", max);
+}`,
+funcex:`// 自定义函数：求两数之和
+int add(int a, int b){
+  return a + b;
+}
+
+// 函数：判断奇偶
+int isOdd(int n){
+  if(n % 2 == 1) return 1;
+  return 0;
+}
+
+// 函数：打印一行分隔符
+void printLine(void){
+  printf("----------\\n");
+}
+
+int main(void){
+  printLine();
+  int x = 10, y = 20;
+  int z = add(x, y);
+  printf("%d + %d = %d\\n", x, y, z);
+
+  int n = 7;
+  if(isOdd(n)){
+    printf("%d 是奇数\\n", n);
+  } else {
+    printf("%d 是偶数\\n", n);
+  }
+  printLine();
+}`,
+ptr:`int main(void){
+  int a = 42;
+  int *p;        // 定义指针p
+  p = &a;        // p指向a的地址
+
+  printf("a的值=%d\\n", a);
+  printf("*p的值=%d\\n", *p);   // 通过指针读取a
+
+  *p = 100;      // 通过指针修改a
+  printf("修改后a=%d\\n", a);
+  printf("修改后*p=%d\\n", *p);
+
+  // 指针与数组
+  int arr[3] = {1, 2, 3};
+  int *q = arr;  // 数组名就是首元素地址
+  printf("arr[0]=%d\\n", *q);
+  printf("arr[1]=%d\\n", *(q+1));
+  printf("arr[2]=%d\\n", *(q+2));
+}`,
+bitop:`int main(void){
+  int a = 0b11001010;  // 202
+  int b = 0b10101100;  // 172
+
+  printf("a = 0x%x\\n", a);
+  printf("b = 0x%x\\n", b);
+  printf("a & b = 0x%x\\n", a & b);   // 按位与
+  printf("a | b = 0x%x\\n", a | b);   // 按位或
+  printf("a ^ b = 0x%x\\n", a ^ b);   // 按位异或
+  printf("~a = 0x%x\\n", (~a) & 0xFF); // 按位取反
+  printf("a << 2 = 0x%x\\n", a << 2); // 左移2位
+  printf("a >> 2 = 0x%x\\n", a >> 2); // 右移2位
+
+  // 置位：把第3位变1
+  int c = 0b00000000;
+  c = c | (1 << 3);
+  printf("置位后c = 0x%x\\n", c);
+
+  // 清位：把第3位变0
+  c = c & ~(1 << 3);
+  printf("清位后c = 0x%x\\n", c);
 }`
 };
 
@@ -3115,11 +3289,11 @@ function simTokenize(src){
       i++; toks.push({t:'str',v:s}); continue;
     }
     if(/[0-9]/.test(c)){
-      let n=''; 
-      if(c==='0'&&(src[i+1]==='x'||src[i+1]==='X')){n='0x';i+=2;while(/[0-9a-fA-F]/.test(src[i]))n+=src[i++];}
-      else if(c==='0'&&(src[i+1]==='b'||src[i+1]==='B')){n='0b';i+=2;while(/[01]/.test(src[i]))n+=src[i++];}
+      let n=''; let radix=10;
+      if(c==='0'&&(src[i+1]==='x'||src[i+1]==='X')){n='';i+=2;radix=16;while(/[0-9a-fA-F]/.test(src[i]))n+=src[i++];}
+      else if(c==='0'&&(src[i+1]==='b'||src[i+1]==='B')){n='';i+=2;radix=2;while(/[01]/.test(src[i]))n+=src[i++];}
       else {while(/[0-9]/.test(src[i]))n+=src[i++];}
-      toks.push({t:'num',v:parseInt(n)}); continue;
+      toks.push({t:'num',v:parseInt(n,radix)}); continue;
     }
     if(/[a-zA-Z_]/.test(c)){
       let id=''; while(/[a-zA-Z0-9_]/.test(src[i]))id+=src[i++];
@@ -3132,40 +3306,64 @@ function simTokenize(src){
     if(['==','!=','<=','>=','<<','>>','&&','||','->','++','--','+=','-=','*=','/=','%=','&=','|=','^='].includes(two)){
       toks.push({t:'op',v:two}); i+=2; continue;
     }
-    if('+-*/%&|^!<>='.includes(c)){toks.push({t:'op',v:c});i++;continue;}
+    if('+-*/%&|^!<>~='.includes(c)){toks.push({t:'op',v:c});i++;continue;}
     if('(){};,[]'.includes(c)){toks.push({t:'pun',v:c});i++;continue;}
     i++; // skip unknown
   }
   return toks;
 }
 
-// ---- expression parser (precedence climbing) ----
-function parseExpr(tk, pos){
-  return parseOr(tk, pos);
+// ---- expression parser (precedence climbing, async for function calls) ----
+async function parseExpr(tk, pos){
+  return await parseOr(tk, pos);
 }
-function parseOr(tk,p){let l=parseAnd(tk,p);while(p.i<tk.length&&tk[p.i].t==='op'&&tk[p.i].v==='||'){p.i++;let r=parseAnd(tk,p);l=(l||r)?1:0;}return l;}
-function parseAnd(tk,p){let l=parseBOr(tk,p);while(p.i<tk.length&&tk[p.i].t==='op'&&tk[p.i].v==='&&'){p.i++;let r=parseBOr(tk,p);l=(l&&r)?1:0;}return l;}
-function parseBOr(tk,p){let l=parseBXor(tk,p);while(p.i<tk.length&&tk[p.i].t==='op'&&tk[p.i].v==='|'){p.i++;let r=parseBXor(tk,p);l=l|r;}return l;}
-function parseBXor(tk,p){let l=parseBAnd(tk,p);while(p.i<tk.length&&tk[p.i].t==='op'&&tk[p.i].v==='^'){p.i++;let r=parseBAnd(tk,p);l=l^r;}return l;}
-function parseBAnd(tk,p){let l=parseEq(tk,p);while(p.i<tk.length&&tk[p.i].t==='op'&&tk[p.i].v==='&'){p.i++;let r=parseEq(tk,p);l=l&r;}return l;}
-function parseEq(tk,p){let l=parseCmp(tk,p);while(p.i<tk.length&&tk[p.i].t==='op'&&['==','!='].includes(tk[p.i].v)){const o=tk[p.i].v;p.i++;let r=parseCmp(tk,p);l=o==='=='?(l===r?1:0):(l!==r?1:0);}return l;}
-function parseCmp(tk,p){let l=parseShift(tk,p);while(p.i<tk.length&&tk[p.i].t==='op'&&['<','>','<=','>='].includes(tk[p.i].v)){const o=tk[p.i].v;p.i++;let r=parseShift(tk,p);l=(o==='<')?(l<r?1:0):(o==='>')?(l>r?1:0):(o==='<=')?(l<=r?1:0):(l>=r?1:0);}return l;}
-function parseShift(tk,p){let l=parseAdd(tk,p);while(p.i<tk.length&&tk[p.i].t==='op'&&['<<','>>'].includes(tk[p.i].v)){const o=tk[p.i].v;p.i++;let r=parseAdd(tk,p);l=o==='<<'?(l<<r):(l>>r);}return l;}
-function parseAdd(tk,p){let l=parseMul(tk,p);while(p.i<tk.length&&tk[p.i].t==='op'&&['+','-'].includes(tk[p.i].v)){const o=tk[p.i].v;p.i++;let r=parseMul(tk,p);l=o==='+'?l+r:l-r;}return l;}
-function parseMul(tk,p){let l=parseUnary(tk,p);while(p.i<tk.length&&tk[p.i].t==='op'&&['*','/','%'].includes(tk[p.i].v)){const o=tk[p.i].v;p.i++;let r=parseUnary(tk,p);l=o==='*'?l*r:(o==='/'?(r===0?0:Math.trunc(l/r)):(r===0?0:l%r));}return l;}
-function parseUnary(tk,p){
+async function parseOr(tk,p){let l=await parseAnd(tk,p);while(p.i<tk.length&&tk[p.i].t==='op'&&tk[p.i].v==='||'){p.i++;let r=await parseAnd(tk,p);l=(l||r)?1:0;}return l;}
+async function parseAnd(tk,p){let l=await parseBOr(tk,p);while(p.i<tk.length&&tk[p.i].t==='op'&&tk[p.i].v==='&&'){p.i++;let r=await parseBOr(tk,p);l=(l&&r)?1:0;}return l;}
+async function parseBOr(tk,p){let l=await parseBXor(tk,p);while(p.i<tk.length&&tk[p.i].t==='op'&&tk[p.i].v==='|'){p.i++;let r=await parseBXor(tk,p);l=l|r;}return l;}
+async function parseBXor(tk,p){let l=await parseBAnd(tk,p);while(p.i<tk.length&&tk[p.i].t==='op'&&tk[p.i].v==='^'){p.i++;let r=await parseBAnd(tk,p);l=l^r;}return l;}
+async function parseBAnd(tk,p){let l=await parseEq(tk,p);while(p.i<tk.length&&tk[p.i].t==='op'&&tk[p.i].v==='&'){p.i++;let r=await parseEq(tk,p);l=l&r;}return l;}
+async function parseEq(tk,p){let l=await parseCmp(tk,p);while(p.i<tk.length&&tk[p.i].t==='op'&&['==','!='].includes(tk[p.i].v)){const o=tk[p.i].v;p.i++;let r=await parseCmp(tk,p);l=o==='=='?(l===r?1:0):(l!==r?1:0);}return l;}
+async function parseCmp(tk,p){let l=await parseShift(tk,p);while(p.i<tk.length&&tk[p.i].t==='op'&&['<','>','<=','>='].includes(tk[p.i].v)){const o=tk[p.i].v;p.i++;let r=await parseShift(tk,p);l=(o==='<')?(l<r?1:0):(o==='>')?(l>r?1:0):(o==='<=')?(l<=r?1:0):(l>=r?1:0);}return l;}
+async function parseShift(tk,p){let l=await parseAdd(tk,p);while(p.i<tk.length&&tk[p.i].t==='op'&&['<<','>>'].includes(tk[p.i].v)){const o=tk[p.i].v;p.i++;let r=await parseAdd(tk,p);l=o==='<<'?(l<<r):(l>>r);}return l;}
+async function parseAdd(tk,p){let l=await parseMul(tk,p);while(p.i<tk.length&&tk[p.i].t==='op'&&['+','-'].includes(tk[p.i].v)){const o=tk[p.i].v;p.i++;let r=await parseMul(tk,p);
+  // 指针算术: ptr + n 或 n + ptr
+  const lp=l&&typeof l==='object'&&l.__ptr!==undefined;
+  const rp=r&&typeof r==='object'&&r.__ptr!==undefined;
+  if(lp&&typeof r==='number'){l={__ptr:l.__ptr,__idx:o==='+'?l.__idx+r:l.__idx-r};continue;}
+  if(rp&&typeof l==='number'){l={__ptr:r.__ptr,__idx:o==='+'?r.__idx+l:r.__idx-l};continue;}
+  l=o==='+'?l+r:l-r;}return l;}
+async function parseMul(tk,p){let l=await parseUnary(tk,p);while(p.i<tk.length&&tk[p.i].t==='op'&&['*','/','%'].includes(tk[p.i].v)){const o=tk[p.i].v;p.i++;let r=await parseUnary(tk,p);l=o==='*'?l*r:(o==='/'?(r===0?0:Math.trunc(l/r)):(r===0?0:l%r));}return l;}
+async function parseUnary(tk,p){
   if(p.i<tk.length&&tk[p.i].t==='op'&&['-','!','~'].includes(tk[p.i].v)){
-    const o=tk[p.i].v;p.i++;let v=parseUnary(tk,p);
+    const o=tk[p.i].v;p.i++;let v=await parseUnary(tk,p);
     return o==='-'?-v:(o==='!'?(v?0:1):(~v));
   }
-  return parsePrimary(tk,p);
+  return await parsePrimary(tk,p);
 }
-function parsePrimary(tk,p){
+async function parsePrimary(tk,p){
   const t=tk[p.i];
   if(!t) throw new Error('表达式意外结束');
   if(t.t==='num'){p.i++;return t.v;}
   if(t.t==='str'){p.i++;return t.v;}
-  if(t.t==='pun'&&t.v==='('){p.i++;const v=parseExpr(tk,p);if(tk[p.i]&&tk[p.i].v===')')p.i++;return v;}
+  if(t.t==='pun'&&t.v==='('){p.i++;const v=await parseExpr(tk,p);if(tk[p.i]&&tk[p.i].v===')')p.i++;return v;}
+  // address-of: &a
+  if(t.t==='op'&&t.v==='&'){
+    p.i++;
+    const vname=tk[p.i]; if(!vname||vname.t!=='id') throw new Error('&后需要变量');
+    p.i++;
+    return {__ptr:vname.v, __idx:0};
+  }
+  // dereference: *p
+  if(t.t==='op'&&t.v==='*'){
+    p.i++;
+    const ptr=await parseExpr(tk,p);
+    if(ptr&&typeof ptr==='object'&&ptr.__ptr!==undefined){
+      const target=simVars[ptr.__ptr];
+      if(Array.isArray(target)) return target[ptr.__idx]|0;
+      return target|0;
+    }
+    return 0;
+  }
   if(t.t==='id'){
     p.i++;
     // GPIOE->REG
@@ -3173,20 +3371,31 @@ function parsePrimary(tk,p){
       p.i++; const reg=tk[p.i].v; p.i++;
       return readReg(t.v, reg);
     }
+    // array element: a[i]
+    if(p.i<tk.length&&tk[p.i].t==='pun'&&tk[p.i].v==='['){
+      p.i++;
+      const idx=await parseExpr(tk,p);
+      if(tk[p.i]&&tk[p.i].v===']')p.i++;
+      const arr=simVars[t.v];
+      if(Array.isArray(arr)) return arr[idx]|0;
+      throw new Error(t.v+'不是数组');
+    }
     // function call
     if(p.i<tk.length&&tk[p.i].t==='pun'&&tk[p.i].v==='('){
       p.i++;
       const args=[];
       if(!(tk[p.i]&&tk[p.i].v===')')){
-        args.push(parseExpr(tk,p));
-        while(p.i<tk.length&&tk[p.i].t==='pun'&&tk[p.i].v===','){p.i++;args.push(parseExpr(tk,p));}
+        args.push(await parseExpr(tk,p));
+        while(p.i<tk.length&&tk[p.i].t==='pun'&&tk[p.i].v===','){p.i++;args.push(await parseExpr(tk,p));}
       }
       if(tk[p.i]&&tk[p.i].v===')')p.i++;
-      return callFunc(t.v, args);
+      return await callFunc(t.v, args);
     }
     // variable
     if(simVars[t.v]===undefined) throw new Error('未定义变量: '+t.v);
-    return simVars[t.v];
+    const val=simVars[t.v];
+    if(Array.isArray(val)) return {__ptr:t.v, __idx:0}; // 数组名退化为指针
+    return val;
   }
   throw new Error('无法解析: '+JSON.stringify(t));
 }
@@ -3201,10 +3410,23 @@ function readReg(port, reg){
   if(port==='RCC'&&reg==='AHB1ENR') return 0x10;
   return 0;
 }
-function callFunc(name, args){
-  // functions that just return a value (no side effect)
+async function callFunc(name, args){
   if(name==='printf'){ simPrintf(args); return 0; }
   if(name==='delay_ms'){ return 0; } // handled specially in exec
+  // user-defined function
+  const fn=simFuncs[name];
+  if(fn){
+    // save scope
+    const saved={};
+    fn.params.forEach((pn,i)=>{ saved[pn]=simVars[pn]; simVars[pn]=(args[i]!==undefined?args[i]:0); });
+    simReturning=false; simRetVal=0;
+    const fp={i:fn.start};
+    await execBlock(tk_global, fp);
+    // restore scope
+    fn.params.forEach(pn=>{ if(saved[pn]===undefined) delete simVars[pn]; else simVars[pn]=saved[pn]; });
+    const rv=simRetVal; simReturning=false;
+    return rv;
+  }
   return 0;
 }
 function simPrintf(args){
@@ -3234,15 +3456,45 @@ async function execStmt(tk, p){
   if(t.t==='pun'&&t.v==='{'){p.i++; await execBlock(tk,p); if(tk[p.i]&&tk[p.i].v==='}')p.i++; return;}
   // empty
   if(t.t==='pun'&&t.v===';'){p.i++; return;}
-  // int declaration
-  if(t.t==='id'&&t.v==='int'){
+  // int / char declaration (支持数组 int a[5], 指针 int *p)
+  if(t.t==='id'&&(t.v==='int'||t.v==='char')){
     p.i++;
     while(true){
+      let isPtr=false;
+      if(tk[p.i]&&tk[p.i].t==='op'&&tk[p.i].v==='*'){isPtr=true;p.i++;}
       const name=tk[p.i]; if(!name||name.t!=='id') throw new Error('int后需要变量名');
       p.i++;
-      let val=0;
-      if(tk[p.i]&&tk[p.i].t==='op'&&tk[p.i].v==='='){p.i++; val=parseExpr(tk,p);}
-      simVars[name.v]=val|0;
+      // array declaration: int a[5] = {1,2,3};
+      if(tk[p.i]&&tk[p.i].t==='pun'&&tk[p.i].v==='['){
+        p.i++;
+        let len=0;
+        if(!(tk[p.i]&&tk[p.i].v===']')){ len=await parseExpr(tk,p); }
+        if(tk[p.i]&&tk[p.i].v===']')p.i++;
+        const arr=new Array(len).fill(0);
+        if(tk[p.i]&&tk[p.i].t==='op'&&tk[p.i].v==='='){
+          p.i++;
+          if(tk[p.i]&&tk[p.i].t==='pun'&&tk[p.i].v==='{'){
+            p.i++; let ai=0;
+            if(!(tk[p.i]&&tk[p.i].v==='}')){
+              arr[ai++]=await parseExpr(tk,p);
+              while(tk[p.i]&&tk[p.i].t==='pun'&&tk[p.i].v===','){p.i++;arr[ai++]=await parseExpr(tk,p);}
+            }
+            if(tk[p.i]&&tk[p.i].v==='}')p.i++;
+          } else {
+            arr[0]=await parseExpr(tk,p);
+          }
+        }
+        simVars[name.v]=arr;
+      } else if(isPtr){
+        // pointer
+        let val=null;
+        if(tk[p.i]&&tk[p.i].t==='op'&&tk[p.i].v==='='){p.i++; val=await parseExpr(tk,p);}
+        simVars[name.v]=val===null?0:val;
+      } else {
+        let val=0;
+        if(tk[p.i]&&tk[p.i].t==='op'&&tk[p.i].v==='='){p.i++; val=await parseExpr(tk,p);}
+        simVars[name.v]=val|0;
+      }
       if(tk[p.i]&&tk[p.i].t==='pun'&&tk[p.i].v===','){p.i++;continue;}
       break;
     }
@@ -3253,7 +3505,7 @@ async function execStmt(tk, p){
   if(t.t==='id'&&t.v==='if'){
     p.i++;
     if(tk[p.i]&&tk[p.i].v==='(')p.i++;
-    const cond=parseExpr(tk,p);
+    const cond=await parseExpr(tk,p);
     if(tk[p.i]&&tk[p.i].v===')')p.i++;
     if(cond){ await execStmt(tk,p); }
     else { skipStmt(tk,p); }
@@ -3271,16 +3523,17 @@ async function execStmt(tk, p){
     if(tk[p.i]&&tk[p.i].v==='(')p.i++;
     const condStart=p.i;
     const condPos={i:p.i};
-    const cond=parseExpr(tk,condPos);
+    const cond=await parseExpr(tk,condPos);
     p.i=condPos.i;
     if(tk[p.i]&&tk[p.i].v===')')p.i++;
     const bodyStart=p.i;
     if(cond){
       await execStmt(tk,p);
       while(true){
-        if(simStop) return;
+        if(simStop||simReturning) return;
+        if(simBreaking){simBreaking=false;break;}
         const cp={i:condStart};
-        const c=parseExpr(tk,cp);
+        const c=await parseExpr(tk,cp);
         if(!c) break;
         p.i=bodyStart;
         await execStmt(tk,p);
@@ -3295,10 +3548,10 @@ async function execStmt(tk, p){
     await execStmt(tk,p);
     const condStart=p.i;
     const condPos={i:p.i};
-    const cond=parseExpr(tk,condPos);
+    const cond=await parseExpr(tk,condPos);
     p.i=condPos.i;
     if(tk[p.i]&&tk[p.i].t==='pun'&&tk[p.i].v===';')p.i++;
-    if(tk[p.i]&&tk[p.i].v===','){p.i++;parseExpr(tk,p);}
+    if(tk[p.i]&&tk[p.i].v===','){p.i++;await parseExpr(tk,p);}
     const incStart=p.i;
     let depth=0;
     while(p.i<tk.length&&!(tk[p.i].t==='pun'&&tk[p.i].v===')'&&depth===0)){
@@ -3312,16 +3565,91 @@ async function execStmt(tk, p){
     if(cond){
       await execStmt(tk,p);
       while(true){
-        if(simStop) return;
+        if(simStop||simReturning) return;
+        if(simBreaking){simBreaking=false;break;}
         const ip={i:incStart};
         if(incEnd>incStart){ await execIncr(tk,ip); }
         const cp={i:condStart};
-        const c=parseExpr(tk,cp);
+        const c=await parseExpr(tk,cp);
         if(!c) break;
         p.i=bodyStart;
         await execStmt(tk,p);
       }
     } else { skipStmt(tk,p); }
+    return;
+  }
+  // return
+  if(t.t==='id'&&t.v==='return'){
+    p.i++;
+    if(tk[p.i]&&tk[p.i].t!=='pun'&&tk[p.i].v!==';'){
+      simRetVal=await parseExpr(tk,p);
+    }
+    simReturning=true;
+    if(tk[p.i]&&tk[p.i].v===';')p.i++;
+    return;
+  }
+  // break
+  if(t.t==='id'&&t.v==='break'){
+    p.i++;
+    simBreaking=true;
+    if(tk[p.i]&&tk[p.i].v===';')p.i++;
+    return;
+  }
+  // switch
+  if(t.t==='id'&&t.v==='switch'){
+    p.i++;
+    if(tk[p.i]&&tk[p.i].v==='(')p.i++;
+    const swVal=await parseExpr(tk,p);
+    if(tk[p.i]&&tk[p.i].v===')')p.i++;
+    if(tk[p.i]&&tk[p.i].v==='{')p.i++;
+    let matched=false; let defStart=-1;
+    // scan cases
+    const scanP={i:p.i};
+    let d=1;
+    while(scanP.i<tk.length&&d>0){
+      const ct=tk[scanP.i];
+      if(ct.v==='{')d++;
+      if(ct.v==='}')d--;
+      if(d<=0)break;
+      if(ct.t==='id'&&ct.v==='case'){
+        scanP.i++;
+        const cv=await parseExpr(tk,scanP);
+        if(tk[scanP.i]&&tk[scanP.i].v===':')scanP.i++;
+        if(cv===swVal){p.i=scanP.i;matched=true;break;}
+      } else if(ct.t==='id'&&ct.v==='default'){
+        defStart=scanP.i;
+        scanP.i++;
+        if(tk[scanP.i]&&tk[scanP.i].v===':')scanP.i++;
+        defStart=scanP.i;
+      } else { scanP.i++; }
+    }
+    if(!matched&&defStart>=0){p.i=defStart;matched=true;}
+    if(matched){
+      simBreaking=false;
+      // execute until break or closing }
+      let bd=1;
+      while(p.i<tk.length&&bd>0&&!simBreaking&&!simReturning){
+        const ct2=tk[p.i];
+        if(ct2.v==='{')bd++;
+        if(ct2.v==='}'){bd--;if(bd<=0){p.i++;break;}}
+        if(ct2.t==='id'&&(ct2.v==='case'||ct2.v==='default')){
+          const isCase=ct2.v==='case';
+          p.i++;
+          if(isCase){ await parseExpr(tk,p); } // skip case value
+          if(tk[p.i]&&tk[p.i].v===':')p.i++;
+          continue;
+        }
+        await execStmt(tk,p);
+      }
+      // always skip to matching closing }
+      let bd2=1;
+      while(p.i<tk.length&&bd2>0){if(tk[p.i].v==='{')bd2++;if(tk[p.i].v==='}')bd2--;p.i++;}
+      simBreaking=false;
+    } else {
+      // skip whole switch body
+      let bd=1;
+      while(p.i<tk.length&&bd>0){if(tk[p.i].v==='{')bd++;if(tk[p.i].v==='}')bd--;p.i++;}
+    }
     return;
   }
   // expression statement (assignment, func call)
@@ -3337,14 +3665,28 @@ async function execIncr(tk,p){
 async function execExprStmt(tk,p){
   const t=tk[p.i];
   if(!t) return;
+  // deref assignment: *p = v
+  if(t.t==='op'&&t.v==='*'){
+    p.i++;
+    const ptr=await parseExpr(tk,p);
+    if(tk[p.i]&&tk[p.i].t==='op'&&tk[p.i].v==='='){
+      p.i++; const v=await parseExpr(tk,p);
+      if(ptr&&typeof ptr==='object'&&ptr.__ptr!==undefined){
+        const target=simVars[ptr.__ptr];
+        if(Array.isArray(target)){ target[ptr.__idx]=v|0; }
+        else { simVars[ptr.__ptr]=v|0; }
+      }
+    }
+    return;
+  }
   // GPIOE->REG = expr  (支持 = |= &= ^=)
   if(t.t==='id'&&p.i+2<tk.length&&tk[p.i+1].t==='op'&&tk[p.i+1].v==='->'){
     const port=t.v; const reg=tk[p.i+2].v; p.i+=3;
     if(tk[p.i]&&tk[p.i].t==='op'){
       const op=tk[p.i].v;
-      if(op==='='){p.i++;const v=parseExpr(tk,p);writeReg(port,reg,v);}
+      if(op==='='){p.i++;const v=await parseExpr(tk,p);writeReg(port,reg,v);}
       else if(op==='|='||op==='&='||op==='^='){
-        p.i++; const v=parseExpr(tk,p);
+        p.i++; const v=await parseExpr(tk,p);
         const cur=readReg(port,reg);
         const nv=op==='|='?(cur|v):(op==='&='?(cur&v):(cur^v));
         writeReg(port,reg,nv);
@@ -3352,34 +3694,46 @@ async function execExprStmt(tk,p){
     }
     return;
   }
-  // var = expr or var op= expr or func call
+  // var = expr or var op= expr or func call or a[i]=v
   if(t.t==='id'){
     const name=t.v;
     p.i++;
+    // array element assignment: a[i] = v
+    if(tk[p.i]&&tk[p.i].t==='pun'&&tk[p.i].v==='['){
+      p.i++;
+      const idx=await parseExpr(tk,p);
+      if(tk[p.i]&&tk[p.i].v===']')p.i++;
+      if(tk[p.i]&&tk[p.i].t==='op'&&tk[p.i].v==='='){
+        p.i++; const v=await parseExpr(tk,p);
+        const arr=simVars[name];
+        if(Array.isArray(arr)){ arr[idx]=v|0; }
+      }
+      return;
+    }
     if(tk[p.i]&&tk[p.i].t==='pun'&&tk[p.i].v==='('){
-      // function call statement - handle delay_ms with real sleep
+      // function call statement
       p.i++;
       const args=[];
       if(!(tk[p.i]&&tk[p.i].v===')')){
-        args.push(parseExpr(tk,p));
-        while(p.i<tk.length&&tk[p.i].t==='pun'&&tk[p.i].v===','){p.i++;args.push(parseExpr(tk,p));}
+        args.push(await parseExpr(tk,p));
+        while(p.i<tk.length&&tk[p.i].t==='pun'&&tk[p.i].v===','){p.i++;args.push(await parseExpr(tk,p));}
       }
       if(tk[p.i]&&tk[p.i].v===')')p.i++;
       if(name==='delay_ms'){
         const ms=Math.min((args[0]|0),1000);
         await simSleep(ms);
       } else {
-        callFunc(name, args);
+        await callFunc(name, args);
       }
       return;
     }
     if(tk[p.i]&&tk[p.i].t==='op'&&tk[p.i].v==='='){
-      p.i++; const v=parseExpr(tk,p);
-      simVars[name]=v|0;
+      p.i++; const v=await parseExpr(tk,p);
+      simVars[name]=v;
       return;
     }
     if(tk[p.i]&&tk[p.i].t==='op'&&['+=','-=','*=','/=','%=','&=','|=','^=','<<=','>>='].includes(tk[p.i].v)){
-      const op=tk[p.i].v; p.i++; const v=parseExpr(tk,p);
+      const op=tk[p.i].v; p.i++; const v=await parseExpr(tk,p);
       const cur=simVars[name]|0;
       const map={'+=':'a+b','-=':'a-b','*=':'a*b','/=':'Math.trunc(a/b)','%=':'a%b','&=':'a&b','|=':'a|b','^=':'a^b','<<=':'a<<b','>>=':'a>>b'};
       simVars[name]=eval(map[op].replace('a',cur).replace('b',v));
@@ -3389,11 +3743,11 @@ async function execExprStmt(tk,p){
     if(tk[p.i]&&tk[p.i].t==='op'&&tk[p.i].v==='--'){p.i++;simVars[name]=(simVars[name]|0)-1;return;}
     // bare expression (just evaluate)
     p.i--;
-    parseExpr(tk,p);
+    await parseExpr(tk,p);
     return;
   }
   // bare expression
-  parseExpr(tk,p);
+  await parseExpr(tk,p);
 }
 
 function writeReg(port, reg, val){
@@ -3434,18 +3788,19 @@ function skipStmt(tk,p){
 
 async function execBlock(tk,p){
   while(p.i<tk.length&&!(tk[p.i].t==='pun'&&tk[p.i].v==='}')){
-    if(simStop) return;
+    if(simStop||simReturning||simBreaking) return;
     await execStmt(tk,p);
   }
 }
 
-let simRunning=false;
+let simRunning=false, tk_global=null;
 async function runSim(){
   const btn=document.getElementById('simRunBtn');
   if(simRunning){ simStop=true; simRunning=false; btn.textContent='▶ 运行'; return; }
   simCodeEl=document.getElementById('simCode');
   simOutEl=document.getElementById('simOut');
   simVars={}; simGPIO={MODER:0,ODR:0}; simStop=false; simRunning=true;
+  simFuncs={}; simReturning=false; simBreaking=false;
   btn.textContent='⏹ 停止';
   resetSimHW();
   simOutEl.innerHTML='<span class="sys">▶ 运行中...\n</span>';
@@ -3454,11 +3809,45 @@ async function runSim(){
   src=src.replace(/^\s*#define[^\n]*/gm,'');
   try{
     const tk=simTokenize(src);
+    tk_global=tk;
+    // 收集 main 之前的函数定义: retType name(params){...}
     let mi=-1;
     for(let i=0;i<tk.length-1;i++){
       if(tk[i].t==='id'&&tk[i].v==='main'&&tk[i+1].t==='pun'&&tk[i+1].v==='('){mi=i;break;}
     }
     if(mi<0) throw new Error('找不到 main() 函数');
+    // scan for function defs before main
+    let si=0;
+    while(si<mi){
+      // pattern: type id ( params ) { body }
+      if(tk[si].t==='id'&&(tk[si].v==='int'||tk[si].v==='char'||tk[si].v==='void')
+         && si+1<mi && tk[si+1].t==='id'
+         && si+2<mi && tk[si+2].t==='pun'&&tk[si+2].v==='('){
+        const fnName=tk[si+1].v;
+        let pi=si+3; const params=[];
+        if(!(tk[pi]&&tk[pi].v===')')){
+          // param: type name
+          while(pi<tk.length&&!(tk[pi].t==='pun'&&tk[pi].v===')')){
+            if(tk[pi].t==='id'&&(tk[pi].v==='int'||tk[pi].v==='char')){
+              pi++;
+              if(tk[pi]&&tk[pi].v==='*')pi++;
+              if(tk[pi]&&tk[pi].t==='id'){params.push(tk[pi].v);pi++;}
+            } else pi++;
+            if(tk[pi]&&tk[pi].v===',')pi++;
+          }
+        }
+        if(tk[pi]&&tk[pi].v===')')pi++;
+        if(tk[pi]&&tk[pi].v==='{'){
+          const bodyStart=pi+1;
+          let d=1, bi=pi+1;
+          while(bi<tk.length&&d>0){if(tk[bi].v==='{')d++;if(tk[bi].v==='}')d--;bi++;}
+          simFuncs[fnName]={params,start:bodyStart,end:bi-1};
+          si=bi; continue;
+        }
+      }
+      si++;
+    }
+    // execute main
     let p={i:mi+2};
     let d=1;
     while(p.i<tk.length&&d>0){if(tk[p.i].v==='(')d++;if(tk[p.i].v===')')d--;p.i++;}
