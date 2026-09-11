@@ -5971,6 +5971,8 @@ function flashPins(newODR,newMODER){
   updateLEDs();
 }
 function simPrint(txt, cls){
+  if(!simOutEl) simOutEl=document.getElementById('simOut');
+  if(!simOutEl) return;
   const span=document.createElement('span');
   if(cls) span.className=cls;
   span.textContent=txt;
