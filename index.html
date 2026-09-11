@@ -429,65 +429,295 @@ const CHAPTERS = [
 `}
 ]},
 /* ===== 第3章 C语言基础 ===== */
-{id:3,ico:'📝',title:'第3章 C语言基础（嵌入式够用版）',desc:'只学点灯阶段需要的语法',lessons:[
- {id:'3-1',title:'3.1 最小程序结构与变量',kp:['main是程序入口，有且只有一个','int整数/float小数/char字符','变量要先声明再用','printf用%d%f%c对应类型'],content:`
+{id:3,ico:'📝',title:'第3章 C语言从0到能玩STM32',desc:'零基础C语言，专为STM32设计',lessons:[
+ {id:'3-1',title:'3.1 程序结构与输出',kp:['main是程序入口，有且只有一个','#include引入别人写好的库','printf打印文字，%d对应整数','\\n是换行符'],content:`
 <h3>一个最小的C程序</h3>
-<pre><code>#include &lt;stdio.h&gt;          // 引入标准输入输出库
+<pre><code>#include &lt;stdio.h&gt;          // 引入标准输入输出库（别人写好的）
 
 int main()                   // 程序入口，有且只有一个
 {
     printf("hello C\\n");     // 打印文字，\\n是换行
     return 0;                // 正常结束
 }</code></pre>
-<p>单片机里没有printf（没屏幕），但结构一样，你的点灯程序也是从main开始。</p>
-<h3>变量：存数据的小盒子</h3>
-<pre><code>int    age = 33;            // 整数，4字节
-float  temp = 36.5f;        // 小数，4字节
-char   flag = 'Y';          // 单个字符，1字节</code></pre>
-<div class="kp"><b>规则：</b>变量必须先声明（告诉编译器叫啥、啥类型）才能用。类型决定占多大空间、能存什么。</div>
-`},
- {id:'3-2',title:'3.2 for循环（点灯核心）',kp:['for(初始化;条件;更新){循环体}','i从0开始，i<5执行5次，i值0,1,2,3,4','循环体是大括号里的代码，重复执行'],content:`
-<h3>for循环的标准形状</h3>
-<pre><code>for(int i = 0; i < 5; i++)
-{
-    // 这里重复执行5次
-}</code></pre>
-<p>三个部分用分号隔开：</p>
-<ol>
-<li><code>int i = 0</code>：计数员i从0开始（只执行1次）</li>
-<li><code>i < 5</code>：每次进来前问"i还小于5吗？"是→进，否→退出</li>
-<li><code>i++</code>：每轮结束i加1（i=i+1的简写）</li>
-</ol>
-<div class="kp"><b>闪5次灯的写法：</b>把"亮→延时→灭→延时"这4行塞进for的大括号，自动重复5次，不用复制粘贴5遍。</div>
-`},
- {id:'3-3',title:'3.3 位运算三件套（必背）',kp:['置1用 |=','清0用 &= ~（波浪号不能少）','翻转用 ^=','1<<n 表示第n位放个1'],content:`
-<h3>把寄存器想成32盏小灯</h3>
-<p>STM32的寄存器是32位的，每位只能是0或1。我们的目标永远是：<b>只动某一位，其他31位不碰</b>。</p>
-<h3>三件套（背下来）</h3>
+<h3>逐行拆解</h3>
 <table>
-<tr><th>符号</th><th>动作</th><th>点灯用途</th></tr>
-<tr><td><code>|=</code></td><td>某位置1</td><td>开时钟、设输出模式</td></tr>
-<tr><td><code>&amp;= ~</code></td><td>某位清0</td><td>MODER先清零</td></tr>
-<tr><td><code>^=</code></td><td>某位翻转</td><td>闪灯、切换状态</td></tr>
+<tr><th>代码</th><th>意思</th></tr>
+<tr><td><code>#include &lt;stdio.h&gt;</code></td><td>把"标准输入输出库"的代码抄进来，这样才能用printf</td></tr>
+<tr><td><code>int main()</code></td><td>程序从这里开始跑，main只能有一个</td></tr>
+<tr><td><code>{ ... }</code></td><td>大括号包起来的是main的"地盘"</td></tr>
+<tr><td><code>printf("...\\n")</code></td><td>往屏幕打印文字，\\n=换行</td></tr>
+<tr><td><code>return 0</code></td><td>告诉系统"我正常跑完了"</td></tr>
 </table>
-<pre><code>REG |=  (1 << 4);    // 第4位置1
-REG &= ~(1 << 4);    // 第4位清0（波浪号不能丢！丢了会清掉所有位）
-REG ^=  (1 << 5);    // 第5位翻转（0变1，1变0）</code></pre>
-<div class="warn-box">⚠️ 清0的波浪号~绝对不能少！<code>REG &amp;= (1<<4)</code> 会把除第4位外的所有位都清成0，灭门惨案。</div>
-<div class="kp"><b>移位：</b><code>1 << 4</code> = 二进制10000 = 十进制16，意思是"第4位放个1"。</div>
+<div class="kp"><b>单片机里：</b>没有printf（没屏幕），但结构一样。你的点灯程序也是从main开始，大括号里写"初始化→while(1)主循环"。</div>
 `},
- {id:'3-4',title:'3.4 函数与数组（预告）',kp:['函数=打包一段代码，起个名就能反复调用','数组=同类型变量排排坐，用下标访问','GPIOE->MODER 中 -> 是结构体指针访问成员'],content:`
-<h3>函数：打包代码</h3>
-<pre><code>void Delay(volatile uint32_t count)   // void=无返回值
+ {id:'3-2',title:'3.2 数据类型大全',kp:['int整数4字节，char字符1字节，float小数4字节','unsigned是无符号（只能存正数）','uint8_t=8位无符号，嵌入式必用','sizeof(类型)查占几字节'],content:`
+<h3>变量：存数据的小盒子</h3>
+<p>变量就是给一块内存起个名字，往里存数据。<b>类型</b>决定盒子多大、能装什么。</p>
+<pre><code>int    a = 33;        // 整数，占4字节，范围约±21亿
+char   c = 'Y';       // 单个字符，占1字节
+float  f = 36.5f;     // 小数，占4字节
+double d = 3.14159;   // 更精确的小数，占8字节</code></pre>
+<h3>嵌入式最常用：固定位宽类型</h3>
+<p>单片机内存小、硬件寄存器有明确位宽，所以用<b>uint8_t/uint16_t/uint32_t</b>更安全：</p>
+<table>
+<tr><th>类型</th><th>字节</th><th>范围</th><th>用途</th></tr>
+<tr><td>uint8_t</td><td>1</td><td>0~255</td><td>小计数、标志位</td></tr>
+<tr><td>uint16_t</td><td>2</td><td>0~65535</td><td>ADC值(12位)</td></tr>
+<tr><td>uint32_t</td><td>4</td><td>0~42亿</td><td>寄存器、地址</td></tr>
+</table>
+<pre><code>uint8_t  led_state = 0;    // 8位，省内存
+uint32_t temp;              // 32位，存寄存器值</code></pre>
+<div class="warn-box">⚠️ <b>unsigned vs signed：</b>unsigned只能存正数（0~255），signed能存正负（-128~127）。嵌入式操作寄存器用unsigned，别让符号位捣乱。</div>
+<div class="kp"><b>查大小：</b><code>sizeof(int)</code> 返回4，表示int占4字节。不同平台int大小可能不同，所以嵌入式优先用uint8_t等固定类型。</div>
+`},
+ {id:'3-3',title:'3.3 变量与常量',kp:['变量必须先声明再用','const修饰的变量不能改','#define定义常量（编译时替换）','变量名只能字母数字下划线，不能数字开头'],content:`
+<h3>变量的声明与赋值</h3>
+<pre><code>int age;          // 声明：告诉编译器有个叫age的int盒子
+age = 33;         // 赋值：把33放进去
+int score = 100;  // 声明+赋值一步到位</code></pre>
+<h3>常量：不能改的值</h3>
+<p>两种写法：</p>
+<pre><code>// 方法1：const（推荐，有类型检查）
+const int MAX = 100;
+// MAX = 200;  // 报错，不能改
+
+// 方法2：#define（纯粹文字替换）
+#define PI 3.14159
+float r = 2 * PI;  // 编译时PI被替换成3.14159</code></pre>
+<div class="kp"><b>命名规则：</b>①只能用字母、数字、下划线 ②不能数字开头 ③区分大小写 ④不能用关键字（int/if/for等）。推荐用有意义的英文名：<code>led_count</code> 而不是 <code>a</code>。</div>
+`},
+ {id:'3-4',title:'3.4 运算符全家桶',kp:['算术：+ - * / %','比较：== != > < >= <=','逻辑：&& || !','位运算：& | ~ ^ << >>','赋值：= += -= |= &= ~'],content:`
+<h3>五大类运算符</h3>
+<table>
+<tr><th>类别</th><th>符号</th><th>例子</th><th>结果</th></tr>
+<tr><td>算术</td><td>+ - * / %</td><td>7%3</td><td>1（取余数）</td></tr>
+<tr><td>比较</td><td>== != &gt; &lt; &gt;= &lt;=</td><td>5==5</td><td>1（真）</td></tr>
+<tr><td>逻辑</td><td>&amp;&amp; || !</td><td>1&amp;&amp;0</td><td>0（假）</td></tr>
+<tr><td>位运算</td><td>&amp; | ~ ^ &lt;&lt; &gt;&gt;</td><td>1&lt;&lt;3</td><td>8</td></tr>
+<tr><td>赋值</td><td>= += -= *=</td><td>a+=3</td><td>a=a+3</td></tr>
+</table>
+<div class="warn-box">⚠️ <b>最容易写错的坑：</b>比较相等是 <code>==</code>（两个等号），赋值是 <code>=</code>（一个等号）。<code>if(a=5)</code> 是把5赋给a，永远为真！应该写 <code>if(a==5)</code>。</div>
+<h3>位运算（STM32核心）</h3>
+<pre><code>a = 0b1010;  // 十进制10
+b = 0b1100;  // 十进制12
+a &amp; b = 0b1000;  // 按位与：都1才1
+a | b = 0b1110;  // 按位或：有1就1
+a ^ b = 0b0110;  // 按位异或：不同为1
+~a    = 0b0101;  // 按位取反
+a<<1  = 0b10100; // 左移1位=乘2</code></pre>
+<div class="kp"><b>三件套（必背）：</b>置1用 <code>|=</code>，清0用 <code>&amp;= ~</code>（波浪号不能少），翻转用 <code>^=</code>。</div>
+`},
+ {id:'3-5',title:'3.5 if/else 条件判断',kp:['if(条件){满足执行}','else if(条件){否则如果}','else{都不满足}','条件里==不能写成='],content:`
+<h3>if的基本结构</h3>
+<pre><code>int temp = 30;
+if(temp &gt; 35)
 {
-    while(count--);                    // count减到0就停
+    printf("太热了\\n");
 }
-Delay(5000000);   // 调用，等大约1秒</code></pre>
-<h3>数组：一排变量</h3>
-<pre><code>int pins[4] = {5, 6, 7, 8};   // 4个整数排排坐
-pins[0];   // 5（下标从0开始）
-pins[3];   // 8</code></pre>
-<div class="tip">💡 <code>GPIOE->MODER</code> 读作"GPIOE的MODER"。GPIOE是指向硬件寄存器组的<b>结构体指针</b>，<code>-></code>就是"指针的成员"。等学到指针再深入，现在会用就行。</div>
+else if(temp &gt; 20)
+{
+    printf("舒适\\n");
+}
+else
+{
+    printf("有点冷\\n");
+}</code></pre>
+<h3>用在按键检测</h3>
+<pre><code>if(GPIOE-&gt;IDR &amp; (1&lt;&lt;5))   // PE5是高电平？
+{
+    // 按键没按下
+}
+else
+{
+    // 按键按下了
+}</code></pre>
+<div class="warn-box">⚠️ <b>坑：</b><code>if(a = 5)</code> 是赋值（永远真），<code>if(a == 5)</code> 才是比较。建议写 <code>if(5 == a)</code>，写错成 <code>if(5 = a)</code> 编译器会报错。</div>
+`},
+ {id:'3-6',title:'3.6 switch-case 多分支',kp:['switch(变量){case 值: 语句; break;}','每个case末尾必须break','没有break会往下穿透','default处理都不匹配的情况'],content:`
+<h3>switch的结构</h3>
+<pre><code>int cmd = 2;
+switch(cmd)
+{
+    case 1: printf("开灯\\n"); break;
+    case 2: printf("关灯\\n"); break;
+    case 3: printf("闪烁\\n"); break;
+    default: printf("无效命令\\n");
+}</code></pre>
+<div class="warn-box">⚠️ <b>不写break会穿透：</b>如果case 2后面没break，执行完case 2会继续执行case 3！这是C的特性，故意的话可以利用，但通常要记得加break。</div>
+<div class="kp"><b>用途：</b>switch特别适合写<b>状态机</b>——不同状态做不同事，比一堆if else清晰。</div>
+`},
+ {id:'3-7',title:'3.7 循环 for/while',kp:['for(初始化;条件;更新)','while(条件)先判断再执行','break跳出循环，continue跳过本次','for适合已知次数，while适合条件循环'],content:`
+<h3>for循环（已知次数）</h3>
+<pre><code>for(int i = 0; i &lt; 5; i++)
+{
+    // 重复5次，i=0,1,2,3,4
+}</code></pre>
+<h3>while循环（条件循环）</h3>
+<pre><code>int i = 0;
+while(i &lt; 5)
+{
+    i++;
+}
+
+// do-while：先执行一次再判断
+do
+{
+    i--;
+} while(i &gt; 0);</code></pre>
+<h3>break 和 continue</h3>
+<pre><code>for(int i = 0; i &lt; 10; i++)
+{
+    if(i == 3) continue;  // 跳过i=3这一轮
+    if(i == 7) break;     // i=7时直接退出循环
+    printf("%d ", i);
+}
+// 输出：0 1 2 4 5 6</code></pre>
+<div class="kp"><b>怎么选：</b>知道循环几次用for（比如闪5次灯）；不知道几次、靠条件判断用while（比如等按键松开）。</div>
+`},
+ {id:'3-8',title:'3.8 数组与字符串',kp:['数组=同类型变量排排坐','下标从0开始，int a[4]下标0~3','字符串=char数组，末尾自动加\\0','strlen求长度，不包含\\0'],content:`
+<h3>数组：一排相同类型的盒子</h3>
+<pre><code>int pins[4] = {5, 6, 7, 8};
+pins[0];   // 5（第一个，下标从0开始！）
+pins[3];   // 8（最后一个）
+// pins[4] 越界！会读到隔壁内存，危险</code></pre>
+<h3>字符串：特殊的char数组</h3>
+<pre><code>char name[] = "STM32";   // 实际占6字节：S T M 3 2 \\0
+char buf[20];             // 声明一个能装19个字符+\\0的缓冲
+
+printf("%s", name);       // %s打印字符串
+int len = strlen(name);   // len=5（不含\\0）</code></pre>
+<div class="warn-box">⚠️ <b>越界是C最大的坑：</b>数组下标从0开始，int a[4]合法下标只有0,1,2,3。写a[4]会破坏相邻内存，可能导致程序崩溃或奇怪bug。</div>
+`},
+ {id:'3-9',title:'3.9 函数详解',kp:['函数=打包代码，起名反复调用','返回类型 函数名(参数列表)','void表示无返回值','return返回结果并退出函数'],content:`
+<h3>函数的标准格式</h3>
+<pre><code>// 返回类型 函数名(参数类型 参数名, ...)
+int add(int a, int b)
+{
+    return a + b;   // 返回结果
+}
+
+// 调用
+int c = add(3, 5);  // c = 8</code></pre>
+<h3>无返回值的函数</h3>
+<pre><code>// void=不返回任何东西
+void Delay(volatile uint32_t count)
+{
+    while(count--);   // 空转延时
+}
+
+Delay(5000000);  // 调用，等约1秒</code></pre>
+<h3>作用域：变量在哪能用</h3>
+<pre><code>int g = 100;          // 全局变量：所有函数都能用
+
+void func()
+{
+    int x = 5;        // 局部变量：只在func里能用
+    printf("%d", g);  // 能用全局g
+}
+// printf("%d", x);  // 报错，x出了func就不存在了</code></pre>
+<div class="kp"><b>记忆：</b>全局变量=整个程序都认识的人；局部变量=只在某个房间里认识的人，出了房间就不认了。</div>
+`},
+ {id:'3-10',title:'3.10 指针入门（重点）',kp:['指针=存地址的变量','&a取a的地址，*p取p指向的值','指针必须先指向有效地址才能用*','野指针=没初始化的指针，用了会死机'],content:`
+<h3>指针是什么</h3>
+<p>把内存想成一栋大楼，每个房间有<b>门牌号（地址）</b>。变量是房间里的东西，指针就是<b>记着门牌号的纸条</b>。</p>
+<pre><code>int a = 5;       // 房间a里放了5
+int *p = &amp;a;     // p是纸条，记着a的门牌号
+                  // &amp;a = 取a的地址
+
+printf("%d", *p); // *p = 按p记的门牌号找房间，取出值=5
+*p = 10;          // 通过p改a的值，现在a=10</code></pre>
+<h3>& 和 * 的关系</h3>
+<table>
+<tr><th>符号</th><th>动作</th><th>例子</th></tr>
+<tr><td><code>&amp;</code></td><td>取地址（问门牌号）</td><td><code>&amp;a</code> → a的地址</td></tr>
+<tr><td><code>*</code></td><td>解引用（按地址取值）</td><td><code>*p</code> → p指向的值</td></tr>
+</table>
+<div class="warn-box">⚠️ <b>野指针=死机之王：</b><code>int *p;</code> 没给p赋值就用 <code>*p = 5</code>，p指向随机地址，写进去可能破坏系统数据导致死机。<b>指针用之前必须赋值！</b></div>
+<div class="kp"><b>口诀：</b>取地址用 <code>&amp;</code>，按地址取值用 <code>*</code>。<code>int *p = &amp;a</code> 读作"p是指针，指向a"。</div>
+`},
+ {id:'3-11',title:'3.11 结构体（重点）',kp:['struct把不同类型打包成一个整体','成员用 . 访问','typedef给类型起别名','STM32寄存器组就是结构体'],content:`
+<h3>结构体：打包不同类型的数据</h3>
+<p>数组只能装同类型，结构体可以把不同类型打包在一起。</p>
+<pre><code>struct Student
+{
+    char name[20];
+    int  age;
+    float score;
+};
+
+struct Student s;
+strcpy(s.name, "张三");  // 点号访问成员
+s.age = 20;
+s.score = 95.5f;</code></pre>
+<h3>typedef起别名（简化写法）</h3>
+<pre><code>typedef struct
+{
+    int MODER;
+    int ODR;
+    int IDR;
+} GPIO_TypeDef;   // 现在GPIO_TypeDef就是这个结构体类型
+
+GPIO_TypeDef gpio;
+gpio.MODER = 1;   // 用点号访问</code></pre>
+<div class="kp"><b>STM32的秘密：</b><code>GPIOE</code> 就是一个结构体指针，指向GPIOE硬件的地址。<code>MODER/ODR/IDR</code> 都是结构体成员，对应实际的硬件寄存器。</div>
+`},
+ {id:'3-12',title:'3.12 指针+结构体=彻底搞懂GPIOE->MODER',kp:['结构体指针用 -> 访问成员','p->x 等价于 (*p).x','GPIOE是指向硬件地址的结构体指针','GPIOE->MODER就是操作硬件寄存器'],content:`
+<h3>一步步推导出GPIOE->MODER</h3>
+<pre><code>// 第1步：普通变量
+int x = 5;
+
+// 第2步：指针指向变量
+int *p = &amp;x;
+*p = 10;        // x变成10
+
+// 第3步：结构体变量
+typedef struct { int MODER; int ODR; } GPIO_t;
+GPIO_t gpio;
+gpio.MODER = 1;    // 用点号
+
+// 第4步：指针指向结构体
+GPIO_t *pg = &amp;gpio;
+(*pg).MODER = 2;   // 先解引用再访问成员
+pg-&gt;MODER = 3;      // 等价写法！-&gt;是(*pg).的简写
+
+// 第5步：STM32的GPIOE
+// GPIOE 是一个指向固定硬件地址(0x40021000)的结构体指针
+#define GPIOE ((GPIO_t*)0x40021000)
+GPIOE-&gt;MODER = 1;  // 直接操作硬件寄存器！</code></pre>
+<div class="kp"><b>一句话记住：</b><code>-&gt;</code> 是 <code>(*指针).成员</code> 的简写。<code>GPIOE-&gt;MODER</code> 就是"找到GPIOE指向的硬件，操作它的MODER寄存器"。</div>
+<div class="tip">💡 现在你看到 <code>RCC-&gt;AHB1ENR</code>、<code>GPIOE-&gt;BSRR</code>、<code>USART1-&gt;DR</code> 都不慌了吧？它们都是"结构体指针->成员"=操作硬件寄存器。</div>
+`},
+ {id:'3-13',title:'3.13 预处理指令',kp:['#include包含头文件','#define定义常量或宏','#ifdef/#endif条件编译','预处理在编译前执行'],content:`
+<h3>预处理是什么</h3>
+<p>以 <code>#</code> 开头的指令，在真正编译前先处理。</p>
+<h3>#include：抄别人代码</h3>
+<pre><code>#include &lt;stdio.h&gt;     // 抄标准库
+#include "stm32f4xx.h" // 抄自己项目的头文件</code></pre>
+<h3>#define：定义常量或宏</h3>
+<pre><code>#define LED_PIN 5        // 常量
+#define MAX(a,b) ((a)&gt;(b)?(a):(b))  // 宏函数
+
+GPIOE-&gt;BSRR = 1 &lt;&lt; LED_PIN;  // LED_PIN会被替换成5</code></pre>
+<h3>#ifdef：条件编译</h3>
+<pre><code>#ifdef DEBUG
+    printf("调试信息\\n");   // 只有定义了DEBUG才编译这行
+#endif</code></pre>
+<div class="kp"><b>头文件守卫：</b>每个.h文件开头写 <code>#ifndef __LED_H #define __LED_H ... #endif</code>，防止重复包含出错。</div>
+`},
+ {id:'3-14',title:'3.14 嵌入式专属关键字',kp:['volatile告诉编译器不要优化这个变量','const修饰的变量只读','static修饰局部变量只初始化一次','typedef给类型起别名'],content:`
+<h3>volatile（嵌入式必学）</h3>
+<p>告诉编译器：<b>这个变量可能被外部（硬件/中断）改变，不要优化掉对它的读取。</b></p>
+<pre><code>volatile uint32_t *DR = (uint32_t*)0x40013804;
+
+while(*DR == 0);  // 如果不加volatile，编译器可能优化成死循环
+                  // 因为它觉得*DR不会变</code></pre>
+<div class="kp"><b>什么时候加volatile：</b>①硬件寄存器 ②中断里和主循环都用的变量 ③多线程共享变量。简单说：会被"代码以外的东西"改变的变量都加。</div>
+<h3>const、static、typedef</h3>
+<pre><code>const int a = 5;     // a不能改，存Flash省RAM
+static int cnt = 0;  // 局部static：函数退出不消失，只初始化一次
+typedef unsigned char u8;  // u8就是unsigned char的别名
+u8 x = 100;          // 等价 unsigned char x=100</code></pre>
+<div class="warn-box">⚠️ <b>static的两个含义：</b>①修饰局部变量=只初始化一次，值保留 ②修饰全局变量/函数=只在本文件可见，其他文件不能用。</div>
 `}
 ]},
 /* ===== 第4章 点灯 ===== */
@@ -1617,12 +1847,22 @@ const QZ = [
 {t:2,q:'ST-LINK下载器的作用是？',opts:['给板子供电','把程序烧进Flash并能调试','连接WiFi','显示画面'],a:1,e:'ST-LINK负责把编译好的程序下载到芯片Flash，还能在线调试。'},
 {t:2,q:'你的山寨ST-LINK下载后必须做什么才能运行新程序？',opts:['拔掉USB重插','按一下板子RESET键','重新编译','按F5'],a:1,e:'山寨ST-LINK固件缺陷，自动复位失效，必须手动按RESET。'},
 {t:2,q:'STM32下载后程序存在哪里？',opts:['RAM','Flash','硬盘','寄存器'],a:1,e:'程序下载到Flash(0x08000000)，断电不丢，上电自动运行。'},
-// 第3章
+// 第3章 C语言
 {t:3,q:'for(int i=0;i<3;i++)循环体执行几次？',opts:['2次','3次','4次','无限次'],a:1,e:'i=0,1,2时各执行一次，共3次。'},
 {t:3,q:'把寄存器第4位置1，其他不动，写？',opts:['REG |= (1<<4)','REG &= (1<<4)','REG = 4','REG ^= (1<<4)'],a:0,e:'|= 按位或，有1得1，只把第4位置1，其他不动。'},
 {t:3,q:'把寄存器第4位清0，其他不动，正确写？',opts:['REG &= (1<<4)','REG &= ~(1<<4)','REG |= (1<<4)','REG = 0'],a:1,e:'&= ~ 是"与等取反"，第4位变0，其他位&1原样保留。少了~会清掉所有位！'},
 {t:3,q:'REG ^= (1<<5)执行一次，第5位会怎样？',opts:['变1','变0','翻转(0变1,1变0)','不变'],a:2,e:'异或翻转：跟1异或就翻面。'},
-{t:3,q:'REG ^= (1<<5)连续执行两次，第5位最终？',opts:['变1','变0','回到原状','不确定'],a:2,e:'翻转两次抵消，回到原状态。'},
+{t:3,q:'uint8_t类型占几个字节？范围是？',opts:['1字节，0~255','2字节，0~65535','4字节，±21亿','1字节，-128~127'],a:0,e:'uint8_t是8位无符号整数，1字节，范围0~255。'},
+{t:3,q:'比较两个数相等用哪个符号？',opts:['=','==','===','!='],a:1,e:'==是比较相等（两个等号），=是赋值（一个等号）。if(a=5)是赋值永远为真！'},
+{t:3,q:'const int a=5; 之后 a=10; 会怎样？',opts:['正常修改','编译报错','运行报错','a变成随机值'],a:1,e:'const修饰的变量是只读的，不能修改，编译会报错。'},
+{t:3,q:'int a[4]={1,2,3,4}; a[3]的值是？',opts:['1','2','3','4'],a:3,e:'数组下标从0开始，a[3]是第4个元素=4。'},
+{t:3,q:'下面哪个是正确的函数定义？',opts:['void f(){ }','f(){ }','int f(){ }','void f{ }'],a:0,e:'函数格式：返回类型 函数名(){ }。void表示无返回值。'},
+{t:3,q:'int a=5; int *p=&a; *p=10; 之后a的值是？',opts:['5','10','0','随机'],a:1,e:'p指向a的地址，*p=10就是通过指针把a改成10。'},
+{t:3,q:'&a 的含义是？',opts:['a的值','a的地址','a的类型','a的大小'],a:1,e:'&是取地址运算符，&a返回变量a在内存中的地址。'},
+{t:3,q:'GPIOE->MODER 等价于？',opts:['GPIOE.MODER','(*GPIOE).MODER','&GPIOE.MODER','GPIOE.MODER->'],a:1,e:'->是(*指针).成员的简写，GPIOE->MODER 就是 (*GPIOE).MODER。'},
+{t:3,q:'volatile关键字的作用是？',opts:['让变量不变','告诉编译器不要优化这个变量','让变量变快','让变量占内存更少'],a:1,e:'volatile告诉编译器该变量可能被外部(硬件/中断)改变，不要优化掉对它的读取。'},
+{t:3,q:'switch语句中不写break会怎样？',opts:['编译报错','跳过后面所有case','继续执行下一个case(穿透)','退出switch'],a:2,e:'不写break会"穿透"到下一个case继续执行，这是C的特性，通常要记得加break。'},
+{t:3,q:'#include <stdio.h> 的作用是？',opts:['定义变量','引入标准输入输出库','打印文字','结束程序'],a:1,e:'#include把指定头文件的内容包含进来，<stdio.h>提供printf等输入输出函数。'},
 // 第4章
 {t:4,q:'点灯第一步必须做什么？',opts:['配置BSRR','开GPIO时钟(RCC)','配置ODR','开中断'],a:1,e:'外设默认关时钟省电，必须先RCC->AHB1ENR |= (1<<4)开GPIOE时钟。'},
 {t:4,q:'GPIOE的时钟使能位在AHB1ENR的第几位？',opts:['第0位','第2位','第4位','第6位'],a:2,e:'A=0,B=1,C=2,D=3,E=4。'},
@@ -1687,6 +1927,60 @@ const QZ = [
 // 第24章 CAN
 {t:24,q:'CAN总线用几根数据线通信？',opts:['1根','2根（CAN_H/CAN_L差分）','3根','4根'],a:1,e:'CAN用CAN_H和CAN_L两根差分线，抗干扰强，一条总线可挂几十个节点。'},
 {t:24,q:'CAN总线上两个节点同时发消息，谁先发？',opts:['ID大的','ID小的（优先级高）','随机','同时发'],a:1,e:'CAN是多主总线，ID小的优先级高先发，ID大的退避等下一轮。'},
+// 补充：第7章 中断
+{t:7,q:'NVIC的作用是？',opts:['存储程序','管理中断优先级和使能','控制GPIO','提供时钟'],a:1,e:'NVIC是嵌套向量中断控制器，负责中断的使能、优先级管理和嵌套。'},
+{t:7,q:'中断优先级数值越小，优先级？',opts:['越高','越低','一样','随机'],a:0,e:'STM32中断优先级数值越小级别越高，0是最高优先级。'},
+// 补充：第8章 串口
+{t:8,q:'波特率115200的含义是？',opts:['每秒115200字节','每秒115200位','每毫秒115200位','每秒115200个字符'],a:1,e:'波特率=每秒传输的位数，115200表示每秒传115200位，约11520字节/秒。'},
+{t:8,q:'Keil中使用printf需要勾哪个选项？',opts:['Use MicroLIB','Use C99','Optimize for Time','Use Compiler 5'],a:0,e:'必须勾Options→Target→Use MicroLIB，否则printf无法使用。'},
+// 补充：第9章 I2C
+{t:9,q:'I2C的起始信号是？',opts:['SCL高电平时SDA下降沿','SCL高电平时SDA上升沿','SCL低电平时SDA变化','SDA高电平时SCL下降沿'],a:0,e:'I2C起始信号：SCL高电平时，SDA从高变低（下降沿）。'},
+{t:9,q:'I2C每个从设备靠什么区分？',opts:['引脚编号','7位地址','波特率','设备名'],a:1,e:'I2C总线上每个从设备有唯一的7位地址，主机发地址选中对应设备。'},
+// 补充：第10章 SPI
+{t:10,q:'SPI有几根线？',opts:['2根','3或4根','1根','8根'],a:1,e:'SPI至少3根(SCK/MOSI/MISO)，带片选CS则4根，可挂多个从设备。'},
+{t:10,q:'SPI中MOSI的意思是？',opts:['主出从入','主入从出','时钟','片选'],a:0,e:'MOSI=Master Out Slave In，主机输出从机输入；MISO=Master In Slave Out。'},
+// 补充：第11章 定时器
+{t:11,q:'定时器定时1ms，系统时钟84MHz，PSC=83，ARR应设？',opts:['999','9999','1000','84'],a:0,e:'定时时间=(PSC+1)×(ARR+1)÷时钟=(84)×(1000)÷84M=1ms，ARR=999。'},
+{t:11,q:'SysTick定时器的位数是？',opts:['8位','16位','24位','32位'],a:2,e:'SysTick是Cortex-M内核自带的24位倒计时定时器。'},
+// 补充：第12章 PWM
+{t:12,q:'PWM占空比是指？',opts:['高电平持续时间占周期的比例','频率','电压大小','电流大小'],a:0,e:'占空比=高电平时间÷周期×100%，决定平均输出电压。'},
+{t:12,q:'要让LED更亮，PWM占空比应该？',opts:['增大','减小','不变','设为0'],a:0,e:'占空比越大，平均电压越高，LED越亮（低电平点亮的板载LED则相反）。'},
+// 补充：第13章 ADC
+{t:13,q:'ADC转换结果2048对应的电压约为？',opts:['0V','1.65V','3.3V','1V'],a:1,e:'12位ADC：电压=数字值÷4095×3.3V，2048÷4095×3.3≈1.65V。'},
+{t:13,q:'F407的ADC是几位的？',opts:['8位','10位','12位','16位'],a:2,e:'STM32F407的ADC是12位，分辨率4096级(0~4095)。'},
+// 补充：第14章 综合项目
+{t:14,q:'驱动层(bsp)的职责是？',opts:['业务逻辑','直接操作寄存器','界面显示','网络通信'],a:1,e:'bsp层直接操作硬件寄存器，上层调用它，换板子只改bsp。'},
+{t:14,q:'分层架构的好处是？',opts:['代码更少','换硬件只改驱动层','运行更快','不需要注释'],a:1,e:'分层后硬件相关代码集中在bsp，换板子/芯片只改bsp层，业务层不用动。'},
+// 补充：第15章 FreeRTOS
+{t:15,q:'FreeRTOS任务函数必须包含什么？',opts:['return语句','阻塞调用(如vTaskDelay)','printf','for循环'],a:1,e:'任务里必须有阻塞，否则高优先级任务一直占CPU，低优先级饿死。'},
+{t:15,q:'FreeRTOS中保护共享资源用？',opts:['全局变量','互斥锁Mutex','直接读写','延时'],a:1,e:'互斥锁(Mutex)保证同一时间只有一个任务访问共享资源，防止冲突。'},
+// 补充：第16章 工程规范
+{t:16,q:'头文件开头的#ifndef/#define/#endif作用是？',opts:['定义常量','防止头文件重复包含','条件编译','声明函数'],a:1,e:'头文件守卫防止同一个头文件被多次包含导致重复定义错误。'},
+{t:16,q:'代码分层中app层应该放在哪一层之上？',opts:['main层','bsp驱动层','硬件层','寄存器层'],a:1,e:'app(业务)层调用bsp(驱动)层，bsp直接操作硬件。'},
+// 补充：第17章 PCB
+{t:17,q:'去耦电容应该放在哪里？',opts:['电源入口处','紧贴芯片电源脚','板子边缘','随便放'],a:1,e:'去耦电容必须紧贴对应电源脚，走线短，才能有效滤除高频噪声。'},
+{t:17,q:'STM32最小系统中BOOT0默认接哪里？',opts:['3.3V','GND','悬空','VCC'],a:1,e:'BOOT0=0从Flash正常启动，所以默认接10K下拉到GND。'},
+// 补充：第18章 DMA
+{t:18,q:'DMA传输完成后怎么通知CPU？',opts:['轮询','DMA传输完成中断','自动打印','不需要通知'],a:1,e:'DMA传完数据会触发传输完成中断，CPU在中断里处理数据。'},
+{t:18,q:'F407有几个DMA控制器？',opts:['1个','2个','4个','8个'],a:1,e:'F407有DMA1和DMA2两个控制器，每个有8个数据流。'},
+// 补充：第19章 看门狗
+{t:19,q:'IWDG独立看门狗用什么时钟？',opts:['HSE','HSI','LSI内部低速RC','PLL'],a:2,e:'IWDG用独立的LSI(约32kHz)时钟，主时钟挂了它还能工作。'},
+{t:19,q:'WWDG窗口看门狗的特点是？',opts:['随时都能喂狗','必须在指定时间窗口内喂狗','不能用中断','比IWDG功耗低'],a:1,e:'WWDG必须在计数器减到窗口值和64之间喂狗，太早太晚都会复位。'},
+// 补充：第20章 RTC
+{t:20,q:'RTC的时钟源推荐用哪个？',opts:['LSI内部RC','LSE外部32.768kHz晶振','HSI','HSE'],a:1,e:'LSE外部晶振精度高，做时钟产品必须用；LSI误差大，仅作备选。'},
+{t:20,q:'RTC唤醒Standby模式后，程序从哪开始？',opts:['中断服务函数','main函数开头','唤醒前的位置','随机'],a:1,e:'Standby唤醒等同于复位，程序从main重新开始，需要用PWR->CSR的SBF标志判断。'},
+// 补充：第23章 DAC
+{t:23,q:'DAC输出电压的计算公式是？',opts:['DHR×3.3','DHR÷4095×VREF','DHR÷4096','DHR×VREF'],a:1,e:'12位DAC输出电压=DHR÷4095×VREF，VREF通常为3.3V。'},
+{t:23,q:'DAC通道1对应的引脚是？',opts:['PA4','PA5','PB0','PC0'],a:0,e:'F407的DAC_OUT1=PA4，DAC_OUT2=PA5。'},
+// 补充：第21章 低功耗
+{t:21,q:'进入Sleep模式用哪条指令？',opts:['__WFI()','__WFE()','__NOP()','__DSB()'],a:0,e:'__WFI()(Wait For Interrupt)进入Sleep模式，任意中断唤醒。'},
+{t:21,q:'哪种低功耗模式唤醒后SRAM数据会丢失？',opts:['Sleep','Stop','Standby','都不会丢'],a:2,e:'Standby模式下SRAM和寄存器全部断电，唤醒等同于复位，数据丢失。'},
+// 补充：第22章 Flash
+{t:22,q:'STM32F407内部Flash起始地址是？',opts:['0x08000000','0x20000000','0x40000000','0x1FFF0000'],a:0,e:'STM32内部Flash起始地址0x08000000，程序就存在这里。'},
+{t:22,q:'Flash写入前必须先擦除，原因是？',opts:['Flash太慢','Flash只能把1写成0，不能把0写成1','需要清缓存','防止冲突'],a:1,e:'Flash编程只能把1写成0，所以写之前必须先擦除(全变成1)，才能写入新数据。'},
+// 补充：第24章 CAN
+{t:24,q:'CAN总线为什么抗干扰能力强？',opts:['用光纤','差分信号传输','电压高','电流大'],a:1,e:'CAN用CAN_H/CAN_L差分信号，干扰同时影响两根线，差值不变，所以抗干扰强。'},
+{t:24,q:'CAN一帧数据最多几个字节？',opts:['4字节','8字节','16字节','64字节'],a:1,e:'CAN标准数据帧最多8字节数据，超过需要分包传输。'},
 ];
 
 /* ============================================================
