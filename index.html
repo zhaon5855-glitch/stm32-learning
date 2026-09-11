@@ -438,7 +438,7 @@ body.dark .theme-toggle{background:rgba(255,255,255,.1)}
 const CHAPTERS = [
 /* ===== 第0章 C语言基础（单片机专用） ===== */
 {id:0,ico:'📘',title:'第0章 C语言基础（单片机专用）',desc:'只学STM32真正用到的C',lessons:[
- {id:'0-1',title:'0.1 指针：地址与解引用',kp:['指针存的是变量的内存地址','*p 读/写地址里的值','&a 取变量a的地址','数组名就是首元素地址','函数指针=回调，HAL库到处都是'],content:`
+ {id:'0-1',title:'0.1 指针：地址与解引用',kp:['指针存的是变量的内存地址','*p 读/写地址里的值，&a 取地址','数组名就是首元素地址','寄存器地址用(volatile uint32_t*)强转后解引用','HAL库句柄本质是结构体指针','void*万能指针需转回具体类型才能用'],content:`
 <h3>为什么单片机必须学指针</h3>
 <p>STM32寄存器就是一块内存，操作寄存器本质就是操作内存地址。<b>不会指针就看不懂HAL库源码</b>，也写不出高效的驱动。</p>
 <h3>指针基本操作</h3>
@@ -463,6 +463,75 @@ void myFunc(int x){ printf("收到%d\\n", x); }
 Callback_t cb = myFunc;  // cb指向myFunc
 cb(100);                  // 调用，输出"收到100"</code></pre>
 <p>STM32里的例子：<code>HAL_UART_RxCpltCallback</code> 就是你注册的回调，串口收到数据时HAL自动调用。</p>
+<h3>实战1：用指针直接操作寄存器地址</h3>
+<p>STM32寄存器都有固定地址，比如GPIOE的ODR寄存器地址是 <code>0x40021014</code>。可以用指针直接写：</p>
+<pre><code>// 把0x40021014强制转换成"指向uint32_t的指针"，再解引用赋值
+*(volatile uint32_t *)0x40021014 = 0x20;  // 往GPIOE->ODR写0x20，点亮PE5
+
+// 拆开看：
+uint32_t *pODR = (uint32_t *)0x40021014;  // pODR指向ODR寄存器
+*pODR = 0x20;                              // 写ODR
+
+// 必须加volatile！寄存器随时可能被硬件改变
+volatile uint32_t *pODR2 = (volatile uint32_t *)0x40021014;</code></pre>
+<div class="tip">💡 <b>为什么强制转换：</b>地址0x40021014本身是个整数，要告诉编译器"把它当成指针用"，所以加 <code>(uint32_t *)</code>。这就是寄存器操作的底层原理，HAL库的 <code>GPIOE->ODR</code> 本质就是这个。</div>
+
+<h3>实战2：指向外设结构体的指针（HAL库句柄）</h3>
+<p>HAL库里每个外设都有一个"句柄"结构体，函数传参就是传这个结构体的指针：</p>
+<pre><code>// UART句柄结构体（简化版）
+typedef struct {
+    USART_TypeDef *Instance;   // 指向USART寄存器基地址
+    uint32_t BaudRate;
+    // ... 其他配置
+} UART_HandleTypeDef;
+
+UART_HandleTypeDef huart1;   // 定义一个串口句柄
+
+// HAL库函数都接收句柄指针
+void HAL_UART_Transmit(UART_HandleTypeDef *huart, uint8_t *data, uint16_t len)
+{
+    // 通过指针访问寄存器
+    huart->Instance->DR = *data;  // 往数据寄存器写
+}
+
+// 调用时传地址
+HAL_UART_Transmit(&huart1, buf, len);  // &huart1 就是句柄的地址</code></pre>
+<div class="kp"><b>HAL库全是指针：</b>你写的每个 <code>HAL_UART_Transmit(&huart1, ...)</code> 都在传指针。理解了指针才能看懂HAL源码。</div>
+
+<h3>实战3：指针做函数"输出参数"</h3>
+<p>C语言函数只能返回一个值，但单片机经常需要"返回"多个结果（比如状态+数据），用指针参数实现：</p>
+<pre><code>// 返回值：0成功 非0失败
+// 输出参数：*temp 存读到的温度
+uint8_t read_temp(int16_t *temp)
+{
+    if(sensor_offline()) return 1;     // 传感器掉线，返回错误
+    *temp = read_sensor_data();        // 成功，把温度写到指针指向的变量
+    return 0;
+}
+
+// 调用
+int16_t t;
+if(read_temp(&t) == 0){
+    printf("温度=%d\\n", t);
+}else{
+    printf("读取失败\\n");
+}</code></pre>
+
+<h3>实战4：void* 通用指针（万能指针）</h3>
+<p><code>void*</code> 可以指向任何类型，HAL库的DMA、回调里经常用：</p>
+<pre><code>// memcpy的原型，void*可以接收任意类型指针
+void *memcpy(void *dest, const void *src, uint32_t n);
+
+// 传什么类型都行
+uint8_t  a[10]; uint16_t b[5];
+memcpy(a, b, 10);  // void*自动适配
+
+// HAL的回调里pBuf就是void*
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+    uint8_t *p = (uint8_t *)huart->pRxBuffPtr;  // 转回具体类型再用
+}</code></pre>
+<div class="warn-box">⚠️ <b>void* 不能直接解引用：</b><code>*vp</code> 是错的，必须先转回具体类型 <code>*(uint8_t*)vp</code> 才能用。</div>
 `},
  {id:'0-2',title:'0.2 结构体与联合体',kp:['struct把多个变量打包成一个整体','.访问成员，->用指针访问','union共享内存，节省空间或拆解寄存器','typedef起别名让代码更短'],content:`
 <h3>结构体struct</h3>
@@ -500,7 +569,7 @@ printf("%x %x %x %x", w.byte[0], w.byte[1], w.byte[2], w.byte[3]);
 // 小端输出: 78 56 34 12</code></pre>
 <div class="warn-box">⚠️ <b>字节序：</b>STM32是小端模式，低字节存在低地址。用union拆数据时要注意顺序。</div>
 `},
- {id:'0-3',title:'0.3 位运算与位域',kp:['&清0、|置1、^翻转、~取反','<< >>移位','置位: reg|=(1<<n) 清位: reg&=~(1<<n)','位域: 在struct里按位定义成员'],content:`
+ {id:'0-3',title:'0.3 位运算与位域',kp:['&清0、|置1、^翻转、~取反','置位reg|=(1<<n) 清位reg&=~(1<<n)','改寄存器要读-改-写，不能直接覆盖','掩码一次操作多个位','提取某几位:(reg>>pos)&mask','清几位用&=~mask，置几位用|=mask'],content:`
 <h3>6种位运算</h3>
 <table>
 <tr><th>运算符</th><th>作用</th><th>例子(8位)</th></tr>
@@ -526,6 +595,88 @@ reg ^= BIT(5);
 // 读取第n位
 if(reg & BIT(5)){ /* 第5位是1 */ }</code></pre>
 <div class="kp"><b>这就是操作STM32寄存器的全部秘密！</b>GPIOE->BSRR = (1<<5) 就是把PE5置1，本质就是位运算。</div>
+<h3>实战1：一次操作多个位（掩码Mask）</h3>
+<p>需要同时控制多个引脚时，用掩码一次操作多个位：</p>
+<pre><code>// 同时点亮PE5和PE6（两个LED）
+#define LED1_PIN  (1<<5)   // 0b00100000
+#define LED2_PIN  (1<<6)   // 0b01000000
+#define LED_MASK  (LED1_PIN | LED2_PIN)  // 0b01100000
+
+GPIOE->BSRR = LED_MASK;        // 两个灯同时亮
+GPIOE->BSRR = LED_MASK << 16;  // BSRR高16位是复位，两个灯同时灭
+
+// 翻转两个灯
+GPIOE->ODR ^= LED_MASK;</code></pre>
+
+<h3>实战2：修改寄存器的某几位（读-改-写）</h3>
+<p>改MODER寄存器的某几位（比如PE5设为输出），不能直接覆盖整个寄存器，要"读出来→改需要的位→写回去"：</p>
+<pre><code>// GPIOE->MODER 复位值是 0x00000000，每2位控制一个引脚
+// PE5对应bit10~11，要设成 01(输出)
+
+// 方法1：手动清位+置位
+GPIOE->MODER &= ~(0x3 << 10);   // 先清bit10、bit11为00
+GPIOE->MODER |=  (0x1 << 10);   // 再置bit10为1 → 01(输出)
+
+// 方法2：一步到位（先清后或）
+GPIOE->MODER = (GPIOE->MODER & ~(0x3<<10)) | (0x1<<10);
+
+// 通用公式：修改从第pos位开始的width位为val
+#define SET_FIELD(reg, pos, width, val) \\
+    reg = (reg & ~(((1<<(width))-1)<<(pos))) | ((val)<<(pos))
+
+SET_FIELD(GPIOE->MODER, 10, 2, 0x1);  // PE5设为输出</code></pre>
+<div class="tip">💡 <b>为什么不能直接赋值：</b>直接 <code>GPIOE->MODER = 0x400</code> 会把其他引脚的配置全清掉！必须读-改-写，只动你要的位。</div>
+
+<h3>实战3：提取寄存器的某几位（掩码+移位）</h3>
+<p>读寄存器时经常需要取出某几位的值：</p>
+<pre><code>// 读GPIOE->IDR的PE5状态（第5位）
+uint8_t pe5 = (GPIOE->IDR >> 5) & 0x1;  // 右移5位，再与1，得到0或1
+
+// 读IDR的PE5~PE7（3位）
+uint8_t pe5_7 = (GPIOE->IDR >> 5) & 0x7;  // 0x7 = 0b111，取低3位
+
+// 通用：提取从pos位开始的width位
+#define GET_FIELD(reg, pos, width)  (((reg) >> (pos)) & ((1<<(width))-1))
+
+uint8_t moder_pe5 = GET_FIELD(GPIOE->MODER, 10, 2);  // 读PE5的模式</code></pre>
+
+<h3>实战4：位运算的实际应用场景</h3>
+<table>
+<tr><th>场景</th><th>代码</th><th>说明</th></tr>
+<tr><td>判断按键按下</td><td><code>if(!(GPIOA->IDR & (1<<0)))</code></td><td>PA0低电平=按下，取反判断</td></tr>
+<tr><td>LED翻转</td><td><code>GPIOE->ODR ^= (1<<5)</code></td><td>异或翻转PE5</td></tr>
+<tr><td>清状态标志</td><td><code>TIM2->SR = ~(1<<0)</code></td><td>往SR写0清中断标志(写1清0)</td></tr>
+<tr><td>判断中断标志</td><td><code>if(USART1->SR & (1<<5))</code></td><td>RXNE位=1表示收到数据</td></tr>
+<tr><td>设置波特率分频</td><td><code>USART1->BRR = 84000000/115200</code></td><td>时钟/波特率</td></tr>
+<tr><td>取低8位</td><td><code>val & 0xFF</code></td><td>只保留低8位</td></tr>
+</table>
+
+<h3>实战5：位运算小技巧</h3>
+<pre><code>// 判断奇偶
+if(n & 1){ /* 奇数 */ }
+
+// 2的幂次乘法（比*快）
+val = n << 1;    // n*2
+val = n << 3;    // n*8
+
+// 2的幂次除法
+val = n >> 1;    // n/2
+
+// 交换两个数（不用临时变量）
+a ^= b; b ^= a; a ^= b;
+
+// 判断是否2的幂
+if(n && !(n & (n-1))){ /* n是2的幂 */ }
+
+// 对2的幂取模（代替%）
+idx = n & (size-1);  // size必须是2的幂，如16/32/64
+
+// 清零最低位的1
+n = n & (n - 1);
+
+// 取最低位的1
+lowest = n & (-n);</code></pre>
+<div class="kp"><b>记住两个核心操作：</b>清某几位用 <code>&= ~mask</code>，置某几位用 <code>|= mask</code>。其他都是这两个的组合。</div>
 <h3>位域（Bit Field）</h3>
 <p>在结构体里按位定义成员，直接操作寄存器的某几位：</p>
 <pre><code>typedef struct {
