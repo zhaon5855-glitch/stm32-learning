@@ -90,6 +90,14 @@ pre .copy-btn{margin-bottom:6px}
 .rm-ch-top{display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px}
 .rm-count{color:var(--sub);font-size:12px}
 .pbar.sm{height:5px}
+/* hal manual */
+.hal-sec{margin:12px;background:var(--card);border-radius:12px;padding:14px;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.hal-h{font-size:16px;color:var(--pri);border-bottom:2px solid var(--pri);padding-bottom:6px;margin-bottom:10px}
+.hal-sec h3{font-size:14px;color:var(--txt);margin:12px 0 6px}
+.hal-ol{padding-left:20px;font-size:13.5px;line-height:1.9}
+.hal-ol li{margin-bottom:4px}
+.reg-note{background:#ecfdf5;border-left:3px solid #10b981;padding:8px 10px;border-radius:6px;margin:8px 0;font-size:12.5px;color:#065f46}
+.link{color:var(--pri);text-decoration:underline;cursor:pointer}
 table{width:100%;border-collapse:collapse;margin:10px 0;font-size:13px}
 table th,table td{border:1px solid var(--line);padding:6px 8px;text-align:left}
 table th{background:#f1f5f9}
@@ -239,6 +247,11 @@ body.dark .theme-toggle{background:rgba(255,255,255,.1)}
     <p>C语言 → 基础外设 → FreeRTOS → 通信协议 → 综合项目，知道自己学到哪、下一步学什么</p>
     <div class="pbar"><span id="roadProg" style="width:0%"></span></div>
   </div>
+  <div class="card" style="cursor:pointer" onclick="showPage('page-hal')">
+    <h3>📕 HAL库速查手册</h3>
+    <p>寄存器 vs HAL对比、CubeMX流程、常用HAL函数示例+底层寄存器标注、HAL踩坑排错</p>
+    <div class="pbar"><span style="width:100%"></span></div>
+  </div>
   <div class="section-title">全部章节（按顺序解锁）</div>
   <div id="chapList"></div>
 </div>
@@ -298,6 +311,13 @@ body.dark .theme-toggle{background:rgba(255,255,255,.1)}
 <div class="page" id="page-roadmap">
   <div class="topbar"><span class="back" onclick="goHome()">‹</span><h1>学习路线进度</h1></div>
   <div id="roadmapBody"></div>
+</div>
+
+<!-- HAL库速查手册 -->
+<div class="page" id="page-hal">
+  <div class="topbar"><span class="back" onclick="goHome()">‹</span><h1>📕 HAL库速查手册</h1></div>
+  <div style="padding:12px 14px;font-size:13px;color:var(--sub)">工作时查函数用，学原理看课程章节</div>
+  <div id="halBody"></div>
 </div>
 
 <!-- ME -->
@@ -3870,7 +3890,11 @@ const QZ = [
 {t:1,lvl:3,type:'think',q:'需求：用定时器实现每500ms翻转一次LED，不能用HAL_Delay阻塞主循环。写出你的实现思路。',e:'参考思路：方案一(定时器中断)：配置TIM2定时500ms，使能更新中断，在TIM2_IRQHandler里翻转LED。方案二(PWM)：用定时器PWM输出，占空比50%，频率2Hz(周期500ms)。方案三(SysTick)：用SysTick计时，主循环里判断时间到了就翻转。重点：中断里只翻转引脚，不做复杂操作。'},
 {t:0,lvl:3,type:'think',q:'需求：定义一个结构体存储学生信息(姓名、年龄、成绩数组[3门])，写一个函数计算并返回平均分。写出你的代码思路。',e:'参考思路：\ntypedef struct {\n    char name[20];\n    uint8_t age;\n    float score[3];\n} Student_t;\nfloat avg_score(Student_t *s) {\n    float sum=0;\n    for(int i=0;i<3;i++) sum += s->score[i];\n    return sum/3;\n}\n要点：用指针传结构体(效率高)，函数返回float。注意结构体里的数组大小固定。'},
 {t:15,lvl:3,type:'think',q:'需求：FreeRTOS里有两个任务，采集任务把数据放到队列，显示任务从队列取数据显示。如果采集速度比显示快，队列满了怎么办？请设计合理的处理策略。',e:'参考思路：1)xQueueSend设置超时为0(不阻塞)，队列满就丢弃最新数据(覆盖策略)，保证采集任务不被阻塞；2)队列深度设大一点(如10个)缓冲；3)如果数据重要不能丢，用xQueueSend阻塞等待，但要设最大超时避免采集任务卡死；4)也可以用互斥锁+全局环形缓冲区，灵活控制。核心原则：高优先级任务(采集)不能被低优先级(显示)拖死。'},
-{t:31,lvl:3,type:'think',q:'需求：多路传感器采集项目中，某一路传感器(I2C温湿度)偶尔无应答导致整个采集卡住。请设计异常处理方案，保证整机不死机。',e:'参考思路：1)所有传感器读取函数都设超时(HAL库的timeout参数)，超时返回错误码；2)采集函数收到错误码后，标记该路数据无效(如设为-999)，不阻塞继续采集下一路；3)连续N次失败后，尝试重新初始化该传感器(软件复位)；4)如果还失败，跳过该路上传其他数据；5)主循环看门狗保证整机不死。关键：假设每个外设都可能失败，代码要优雅降级。'}
+{t:31,lvl:3,type:'think',q:'需求：多路传感器采集项目中，某一路传感器(I2C温湿度)偶尔无应答导致整个采集卡住。请设计异常处理方案，保证整机不死机。',e:'参考思路：1)所有传感器读取函数都设超时(HAL库的timeout参数)，超时返回错误码；2)采集函数收到错误码后，标记该路数据无效(如设为-999)，不阻塞继续采集下一路；3)连续N次失败后，尝试重新初始化该传感器(软件复位)；4)如果还失败，跳过该路上传其他数据；5)主循环看门狗保证整机不死。关键：假设每个外设都可能失败，代码要优雅降级。'},
+// ============ HAL库专项习题 ============
+{t:0,cat:'hal',lvl:1,q:'关于HAL库和寄存器开发，下列说法正确的是？',opts:['HAL库完全替代寄存器，学HAL就够了','会调用HAL函数不等于学会STM32，必须先懂寄存器底层','寄存器开发已经过时，不用学','HAL库执行效率比寄存器高'],a:1,e:'HAL库只是封装，底层还是操作寄存器。必须先懂寄存器原理，再用HAL库提高效率。只会点CubeMX出了问题查不了。'},
+{t:0,cat:'hal',lvl:1,q:'CubeMX重新生成代码后，用户写的代码被覆盖了，原因是？',opts:['CubeMX bug','代码写在USER CODE BEGIN/END块外面','没保存','Keil问题'],a:1,e:'用户代码必须写在/* USER CODE BEGIN */和/* USER CODE END */之间，块外的代码重新生成时会被覆盖。'},
+{t:0,cat:'hal',lvl:2,q:'找出下面串口接收代码的错误：<pre><code>uint8_t rx;\nint main(void)\n{\n    HAL_Init();\n    SystemClock_Config();\n    MX_USART1_UART_Init();\n    while(1){ HAL_Delay(1000); }\n}\nvoid HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)\n{\n    printf("recv: %c\\n", rx);\n    HAL_UART_Receive_IT(&huart1, &rx, 1);\n}</code></pre>',opts:['回调函数名错了','main里没调用HAL_UART_Receive_IT开启接收','printf格式错了','MX_USART1_UART_Init顺序错'],a:1,e:'中断接收必须先调用HAL_UART_Receive_IT(&huart1,&rx,1)开启，回调才会触发。main里只初始化了串口但没开启接收，所以回调永远不执行。'}
 ];
 
 /* ============================================================
@@ -4041,9 +4065,10 @@ function startPractice(mode){
   else if(mode==='level1')pool=QZ.map((q,i)=>(!q.lvl||q.lvl===1)?i:-1).filter(i=>i>=0);
   else if(mode==='level2')pool=QZ.map((q,i)=>q.lvl===2?i:-1).filter(i=>i>=0);
   else if(mode==='level3')pool=QZ.map((q,i)=>q.lvl===3?i:-1).filter(i=>i>=0);
+  else if(mode==='hal')pool=QZ.map((q,i)=>q.cat==='hal'?i:-1).filter(i=>i>=0);
   if(!pool.length){alert(mode==='wrong'?'还没有错题，多做几道就有了':mode==='review'?'暂无到期复习题':'题库为空');return;}
   quizState={pool,idx:0,mode,correct:0};
-  document.getElementById('quizTitle').textContent={order:'顺序练习',random:'随机刷题',wrong:'错题本',review:'艾宾浩斯复习',exam:'模拟考试(20题)',daily:'每日10题',level1:'🌱 基础题',level2:'🐛 改错题',level3:'💡 编程思考题'}[mode];
+  document.getElementById('quizTitle').textContent={order:'顺序练习',random:'随机刷题',wrong:'错题本',review:'艾宾浩斯复习',exam:'模拟考试(20题)',daily:'每日10题',level1:'🌱 基础题',level2:'🐛 改错题',level3:'💡 编程思考题',hal:'📕 HAL库专项'}[mode];
   showQuiz();
   showPage('page-quiz');
 }
@@ -4062,7 +4087,7 @@ function showQuiz(){
   const q=QZ[i];
   document.getElementById('quizProg').textContent=`${quizState.idx+1}/${quizState.pool.length}`;
   const area=document.getElementById('quizArea');
-  let html=`<div class="quiz-card"><span class="qtag">${CHAPTERS.find(c=>c.id===q.t)?.title||''} ${q.type==='write'?'·默写':q.type==='fill'?'·填空':q.type==='think'?'·编程思考':q.lvl===2?'·改错题':''} ${q.lvl===1?'<span class="lvl lvl1">基础</span>':q.lvl===2?'<span class="lvl lvl2">改错</span>':q.lvl===3?'<span class="lvl lvl3">思考</span>':''}</span>
+  let html=`<div class="quiz-card"><span class="qtag">${q.cat==='hal'?'📕 HAL库速查':(CHAPTERS.find(c=>c.id===q.t)?.title||'')} ${q.type==='write'?'·默写':q.type==='fill'?'·填空':q.type==='think'?'·编程思考':q.lvl===2?'·改错题':''} ${q.lvl===1?'<span class="lvl lvl1">基础</span>':q.lvl===2?'<span class="lvl lvl2">改错</span>':q.lvl===3?'<span class="lvl lvl3">思考</span>':''}</span>
     <div class="qtxt">${quizState.idx+1}. ${q.q}</div>`;
   if(q.type==='write'||q.type==='think'){
     html+=`<textarea class="fill-input" id="fillAns" rows="4" placeholder="${q.type==='think'?'写下你的实现思路，提交后查看参考答案...':'在此输入代码...'}"></textarea>`;
@@ -4240,6 +4265,7 @@ function showPage(id){
   if(id==='page-me'){updateStats();renderCheckin();renderReport();}
   if(id==='page-cards')showCard();
   if(id==='page-roadmap')renderRoadmap();
+  if(id==='page-hal')renderHal();
 }
 
 /* ========== 学习路线 ========== */
@@ -4283,6 +4309,167 @@ function renderRoadmap(){
   document.getElementById('roadmapBody').innerHTML=html;
   const rp=document.getElementById('roadProg');
   if(rp)rp.style.width=totalPct+'%';
+}
+
+/* ========== HAL库速查手册 ========== */
+const HAL_CONTENT=`
+<div class="hal-sec">
+  <h2 class="hal-h">1. 概念入门：什么是HAL库</h2>
+  <p><b>HAL库</b>（Hardware Abstraction Layer，硬件抽象层）是ST官方封装好的C函数库。你不用直接写寄存器，调用 <code>HAL_GPIO_WritePin()</code> 这种函数就能操作硬件，底层寄存器由库帮你操作。</p>
+  <div class="warn-box">⚠️ <b>硬性警示：</b>会调用HAL函数≠学会STM32！必须先懂寄存器底层原理（课程第4、6、8章），再学HAL库。<b>不要上来只点CubeMX</b>，否则出了问题根本查不了。详见<a class="link" onclick="openChapter(32)">第33章误区</a>。</div>
+  <h3>寄存器裸机 VS HAL库 对比</h3>
+  <table>
+    <tr><th>对比项</th><th>寄存器裸机</th><th>HAL库</th></tr>
+    <tr><td>代码量</td><td>少（直接操作寄存器）</td><td>多（封装层厚）</td></tr>
+    <tr><td>上手难度</td><td>难（要记寄存器）</td><td>易（函数名见名知意）</td></tr>
+    <tr><td>底层可见性</td><td>完全可见</td><td>被封装，需看源码</td></tr>
+    <tr><td>开发速度</td><td>慢</td><td>快（CubeMX生成）</td></tr>
+    <tr><td>执行效率</td><td>最高</td><td>略低（有调用开销）</td></tr>
+    <tr><td>适用场景</td><td>性能敏感/精确时序</td><td>快速开发/项目交付</td></tr>
+    <tr><td>出问题排查</td><td>直接看寄存器</td><td>要懂HAL内部+寄存器</td></tr>
+  </table>
+  <div class="kp"><b>建议路线：</b>先用寄存器点1~2个外设（GPIO+串口）理解原理 → 再用HAL库+CubeMX提高效率。两者结合，不偏废。</div>
+</div>
+
+<div class="hal-sec">
+  <h2 class="hal-h">2. CubeMX实操流程（正向5步）</h2>
+  <ol class="hal-ol">
+    <li><b>选芯片：</b>打开STM32CubeMX → New Project → 搜索型号（如STM32F407VET6）→ Start Project</li>
+    <li><b>配置时钟：</b>Pinout & Configuration → RCC → High Speed Clock选"Crystal/Ceramic Resonator" → Clock Configuration页面配HSE值和PLL（F407: HSE=8, M=8, N=336, P=2 → 168MHz）</li>
+    <li><b>配置外设：</b>在Pinout页面点引脚选功能（PA9选USART1_TX），左侧菜单点外设名配置参数（波特率、GPIO模式等）</li>
+    <li><b>生成工程：</b>Project Manager → 填工程名/路径 → Toolchain选MDK-ARM → 点GENERATE CODE</li>
+    <li><b>Keil打开：</b>用Keil打开生成的.uvprojx，用户代码写在 <code>/* USER CODE BEGIN */</code> 和 <code>/* USER CODE END */</code> 之间</li>
+  </ol>
+  <div class="tip">💡 <b>生成代码不会覆盖USER CODE块里的内容</b>，但块外面的会被覆盖。改CubeMX配置重新生成前，确认代码都在保护块内。踩坑详见<a class="link" onclick="openChapter(29)">第30.2节</a>。</div>
+</div>
+
+<div class="hal-sec">
+  <h2 class="hal-h">3. 常用HAL函数速查</h2>
+
+  <h3>3.1 GPIO</h3>
+  <pre><code>// 写引脚：PE5输出高电平
+HAL_GPIO_WritePin(GPIOE, GPIO_PIN_5, GPIO_PIN_SET);
+// 底层：GPIOE->BSRR = GPIO_PIN_5  （写BSRR置位寄存器）
+
+// 读引脚：读PA0电平
+GPIO_PinState s = HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_0);
+// 底层：(GPIOA->IDR & GPIO_PIN_0) ? 1 : 0  （读IDR输入数据寄存器）
+
+// 翻转引脚
+HAL_GPIO_TogglePin(GPIOE, GPIO_PIN_5);
+// 底层：GPIOE->ODR ^= GPIO_PIN_5  （异或翻转ODR）</code></pre>
+  <div class="reg-note">📌 操作的寄存器：<b>GPIOx_BSRR</b>（置位/复位）、<b>GPIOx_IDR</b>（输入）、<b>GPIOx_ODR</b>（输出）。课程第4章讲过。</div>
+
+  <h3>3.2 串口UART</h3>
+  <pre><code>// 阻塞发送（等待发完才返回）
+uint8_t buf[] = "hello";
+HAL_UART_Transmit(&huart1, buf, 5, 100);  // 100ms超时
+// 底层：循环写 USART1->DR，等待 USART1->SR 的TXE位
+
+// 阻塞接收
+uint8_t rx;
+HAL_UART_Receive(&huart1, &rx, 1, 1000);
+// 底层：等待 USART1->SR 的RXNE位，读 USART1->DR
+
+// 中断发送（不阻塞，发完进回调）
+HAL_UART_Transmit_IT(&huart1, buf, 5);
+void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart){
+  // 发送完成回调
+}
+
+// 中断接收
+HAL_UART_Receive_IT(&huart1, &rx, 1);
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
+  // 收到1字节回调，要在这里重新开启接收
+  HAL_UART_Receive_IT(&huart1, &rx, 1);
+}</code></pre>
+  <div class="reg-note">📌 操作的寄存器：<b>USARTx_DR</b>（数据寄存器）、<b>USARTx_SR</b>（状态寄存器，TXE/RXNE/TC位）、<b>USARTx_BRR</b>（波特率）。课程第8章讲过。</div>
+
+  <h3>3.3 定时器PWM</h3>
+  <pre><code>// 启动PWM输出（TIM2通道1，PA0）
+HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
+// 底层：TIM2->CCER |= CC1E;  TIM2->CR1 |= CEN
+
+// 设置占空比（比较值）
+__HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, 500);
+// 底层：TIM2->CCR1 = 500
+
+// 停止PWM
+HAL_TIM_PWM_Stop(&htim2, TIM_CHANNEL_1);</code></pre>
+  <div class="reg-note">📌 操作的寄存器：<b>TIMx_CCER</b>（捕获/比较使能）、<b>TIMx_CCR1</b>（比较值=占空比）、<b>TIMx_ARR</b>（自动重装载=周期）。课程第10章讲过。</div>
+
+  <h3>3.4 ADC</h3>
+  <pre><code>// 启动ADC转换
+HAL_ADC_Start(&hadc1);
+// 底层：ADC1->CR2 |= ADON | SWSTART
+
+// 等待转换完成，读值
+HAL_ADC_PollForConversion(&hadc1, 100);  // 100ms超时
+uint32_t val = HAL_ADC_GetValue(&hadc1);
+// 底层：while(!(ADC1->SR & EOC));  val = ADC1->DR
+
+// 停止
+HAL_ADC_Stop(&hadc1);</code></pre>
+  <div class="reg-note">📌 操作的寄存器：<b>ADCx_CR2</b>（控制/启动）、<b>ADCx_SR</b>（EOC转换完成标志）、<b>ADCx_DR</b>（数据寄存器）。课程第12章讲过。</div>
+
+  <h3>3.5 DMA</h3>
+  <pre><code>// 串口DMA发送（不占CPU）
+HAL_UART_Transmit_DMA(&huart1, buf, len);
+// 底层：配置DMA1数据流源地址=buf，目的=USART1->DR，使能传输
+
+// 串口DMA接收
+HAL_UART_Receive_DMA(&huart1, rx_buf, len);
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
+  // DMA接收完成回调
+}
+
+// 停止DMA
+HAL_UART_DMAStop(&huart1);</code></pre>
+  <div class="reg-note">📌 操作的寄存器：<b>DMA_Stream->PAR</b>（外设地址）、<b>DMA_Stream->M0AR</b>（内存地址）、<b>DMA_Stream->NDTR</b>（数据量）。课程第16章讲过。</div>
+</div>
+
+<div class="hal-sec">
+  <h2 class="hal-h">4. HAL库常见踩坑排错</h2>
+
+  <div class="bug-box">
+    <p><b>现象：</b>串口接收中断回调 <code>HAL_UART_RxCpltCallback</code> 不执行</p>
+    <p><b>可能原因：</b>① 没调用 <code>HAL_UART_Receive_IT()</code> 开启接收；② 回调函数名拼写错；③ 串口时钟/GPIO没开。</p>
+    <p><b>排查：</b>1) 确认main里调用了 <code>HAL_UART_Receive_IT(&huart1,&rx,1)</code>；2) 回调函数名必须完全一致（区分大小写）；3) 检查 <code>__HAL_RCC_USART1_CLK_ENABLE()</code>；4) 调试模式在回调里打断点看进不进。</p>
+  </div>
+
+  <div class="bug-box">
+    <p><b>现象：</b>串口接收数据乱码（波特率看着对）</p>
+    <p><b>可能原因：</b>系统时钟配置错，导致HAL库算出来的波特率分频不对。</p>
+    <p><b>排查：</b>1) 用LED闪烁测试时钟准不准（HAL_Delay(1000)是否真的1秒）；2) 检查 <code>SystemCoreClock</code> 变量值是否168000000；3) 重新核对CubeMX时钟树配置。详见<a class="link" onclick="openChapter(29)">第30.4节</a>。</p>
+  </div>
+
+  <div class="bug-box">
+    <p><b>现象：</b>换了CubeMX版本后，原来能编译的工程报错</p>
+    <p><b>可能原因：</b>不同CubeMX版本生成的HAL库版本不同，API有差异（如 <code>HAL_SPI_Transmit</code> 参数变化）。</p>
+    <p><b>排查：</b>1) 不要随便升级CubeMX，工程固定用一个版本；2) 对比新旧HAL库的 <code>stm32f4xx_hal_def.h</code> 版本号；3) 出错的函数查新版头文件声明，按新API改。</p>
+  </div>
+
+  <div class="bug-box">
+    <p><b>现象：</b>调用HAL函数后进入HardFault死机</p>
+    <p><b>可能原因：</b>① 句柄没初始化就用（<code>&huart1</code> 里是空的）；② DMA缓冲区在CCM内存（DMA访问不到）；③ 栈溢出（HAL内部用了大局部变量）。</p>
+    <p><b>排查：</b>1) 确认 <code>MX_USART1_UART_Init()</code> 等初始化函数在main里调用了；2) DMA缓冲区加 <code>__attribute__((section(".RAM_D1")))</code> 或定义在普通SRAM；3) 把启动文件 <code>Stack_Size</code> 改大到0x1000。详见<a class="link" onclick="openChapter(29)">第30.5节</a>。</p>
+  </div>
+
+  <div class="bug-box">
+    <p><b>现象：</b>HAL_Delay() 卡死不返回</p>
+    <p><b>可能原因：</b>SysTick中断没开，或者在更高优先级中断里调用HAL_Delay。</p>
+    <p><b>排查：</b>1) 检查 <code>HAL_Init()</code> 里 <code>HAL_SYSTICK_Config()</code> 是否执行；2) <b>中断里不要用HAL_Delay</b>，改用自定义计时或while循环+SysTick计数器。</p>
+  </div>
+</div>
+
+<div class="hal-sec">
+  <h2 class="hal-h">5. 配套习题</h2>
+  <p>点击下方按钮进入HAL库专项练习（2道概念选择 + 1道改错题）：</p>
+  <button class="btn" style="width:100%;margin:8px 0" onclick="startPractice('hal')">📝 开始HAL库练习</button>
+</div>
+`;
+function renderHal(){
+  document.getElementById('halBody').innerHTML=HAL_CONTENT;
 }
 
 function goHome(){showPage('page-home');renderChapters();document.getElementById('searchInput').value='';document.getElementById('searchResult').innerHTML='';}
