@@ -1,0 +1,1200 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#2563eb">
+<title>STM32移动课堂</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{--bg:#f5f6f8;--card:#fff;--pri:#2563eb;--pri2:#1d4ed8;--ok:#16a34a;--warn:#f59e0b;--err:#dc2626;--txt:#1e293b;--sub:#64748b;--line:#e2e8f0;--code-bg:#0f172a;--code-tx:#e2e8f0}
+html,body{height:100%}
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--txt);font-size:15px;line-height:1.6;overflow-x:hidden}
+#app{max-width:540px;margin:0 auto;min-height:100vh;padding-bottom:64px;background:var(--bg)}
+.page{display:none;animation:fade .2s ease}
+.page.active{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* top bar */
+.topbar{position:sticky;top:0;z-index:50;background:var(--pri);color:#fff;padding:12px 16px;display:flex;align-items:center;gap:10px;box-shadow:0 2px 8px rgba(0,0,0,.15)}
+.topbar h1{font-size:17px;font-weight:600;flex:1}
+.topbar .back{font-size:20px;cursor:pointer;width:28px;text-align:center}
+.topbar .act{font-size:13px;opacity:.9;cursor:pointer}
+
+/* cards */
+.card{background:var(--card);border-radius:12px;padding:14px;margin:12px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.card h3{font-size:16px;margin-bottom:8px;color:var(--txt)}
+.card p{color:#334155;margin:6px 0}
+
+/* home */
+.hero{background:linear-gradient(135deg,#2563eb,#7c3aed);color:#fff;padding:20px 16px 28px}
+.hero h2{font-size:22px;margin-bottom:4px}
+.hero .sub{opacity:.85;font-size:13px}
+.stat-row{display:flex;gap:10px;margin:-18px 12px 12px}
+.stat-box{flex:1;background:var(--card);border-radius:12px;padding:12px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.stat-box .num{font-size:22px;font-weight:700;color:var(--pri)}
+.stat-box .lbl{font-size:12px;color:var(--sub);margin-top:2px}
+.section-title{font-size:14px;font-weight:600;color:var(--sub);padding:6px 16px;margin-top:8px}
+.chapter-item{background:var(--card);margin:8px 12px;border-radius:12px;padding:14px;display:flex;align-items:center;gap:12px;box-shadow:0 1px 3px rgba(0,0,0,.06);cursor:pointer}
+.chapter-item .ico{width:42px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.chapter-item .info{flex:1;min-width:0}
+.chapter-item .ttl{font-size:15px;font-weight:600}
+.chapter-item .desc{font-size:12px;color:var(--sub);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chapter-item .prog{font-size:12px;color:var(--ok);font-weight:600}
+.chapter-item.locked{opacity:.5}
+.chapter-item .lock-ico{font-size:16px}
+
+/* lesson list */
+.lesson-item{background:var(--card);margin:8px 12px;border-radius:10px;padding:12px 14px;display:flex;align-items:center;gap:10px;cursor:pointer}
+.lesson-item .dot{width:8px;height:8px;border-radius:50%;background:var(--line);flex-shrink:0}
+.lesson-item.done .dot{background:var(--ok)}
+.lesson-item.cur .dot{background:var(--pri);box-shadow:0 0 0 3px rgba(37,99,235,.2)}
+.lesson-item .lt{flex:1;font-size:14px}
+.lesson-item .ln{font-size:12px;color:var(--sub)}
+
+/* lesson content */
+.lesson-body{padding:14px 16px 24px}
+.lesson-body h2{font-size:19px;margin-bottom:6px}
+.lesson-body .meta{font-size:12px;color:var(--sub);margin-bottom:14px}
+.lesson-body h3{font-size:16px;margin:18px 0 8px;color:var(--pri2);padding-left:10px;border-left:3px solid var(--pri)}
+.lesson-body p{margin:8px 0;color:#334155}
+.lesson-body ul,.lesson-body ol{margin:8px 0 8px 20px;color:#334155}
+.lesson-body li{margin:4px 0}
+.lesson-body pre{background:var(--code-bg);color:var(--code-tx);padding:12px 14px;border-radius:8px;overflow-x:auto;font-size:13px;line-height:1.5;margin:10px 0;font-family:"Consolas","Courier New",monospace}
+.lesson-body code{background:#eef2ff;color:var(--pri2);padding:1px 6px;border-radius:4px;font-size:13px;font-family:"Consolas",monospace}
+.lesson-body pre code{background:none;color:inherit;padding:0}
+.kp{background:#fef3c7;border-left:4px solid var(--warn);padding:10px 12px;border-radius:6px;margin:12px 0;font-size:14px}
+.kp b{color:#92400e}
+.tip{background:#dbeafe;border-left:4px solid var(--pri);padding:10px 12px;border-radius:6px;margin:12px 0;font-size:14px;color:#1e40af}
+.warn-box{background:#fee2e2;border-left:4px solid var(--err);padding:10px 12px;border-radius:6px;margin:12px 0;font-size:14px;color:#991b1b}
+table{width:100%;border-collapse:collapse;margin:10px 0;font-size:13px}
+table th,table td{border:1px solid var(--line);padding:6px 8px;text-align:left}
+table th{background:#f1f5f9}
+.lesson-quiz{margin-top:20px;padding-top:16px;border-top:2px dashed var(--line)}
+.btn{display:inline-block;background:var(--pri);color:#fff;border:none;border-radius:8px;padding:10px 18px;font-size:14px;cursor:pointer;font-weight:500}
+.btn.ghost{background:var(--card);color:var(--pri);border:1px solid var(--pri)}
+.btn.block{display:block;width:100%;text-align:center;margin:8px 0}
+.btn:disabled{opacity:.5}
+
+/* quiz */
+.quiz-card{background:var(--card);margin:12px;border-radius:12px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.quiz-card .qtag{display:inline-block;background:#eef2ff;color:var(--pri2);font-size:11px;padding:2px 8px;border-radius:4px;margin-bottom:8px}
+.quiz-card .qtxt{font-size:15px;font-weight:500;margin-bottom:12px;line-height:1.5}
+.opt{display:block;background:#f8fafc;border:1.5px solid var(--line);border-radius:8px;padding:10px 12px;margin:8px 0;cursor:pointer;font-size:14px;transition:all .15s}
+.opt:active{background:#eef2ff}
+.opt.sel{border-color:var(--pri);background:#eff6ff}
+.opt.correct{border-color:var(--ok);background:#f0fdf4}
+.opt.wrong{border-color:var(--err);background:#fef2f2}
+.opt .key{display:inline-block;width:20px;font-weight:600}
+.quiz-result{padding:10px;border-radius:8px;margin:10px 0;font-size:14px;display:none}
+.quiz-result.show{display:block}
+.quiz-result.ok{background:#f0fdf4;color:var(--ok)}
+.quiz-result.no{background:#fef2f2;color:var(--err)}
+.explain{background:#f8fafc;border-radius:8px;padding:10px;margin-top:8px;font-size:13px;color:#475569;display:none}
+.explain.show{display:block}
+.fill-input{width:100%;border:1.5px solid var(--line);border-radius:8px;padding:10px;font-size:14px;font-family:"Consolas",monospace;margin:8px 0}
+.fill-input:focus{outline:none;border-color:var(--pri)}
+
+/* bottom nav */
+.tabbar{position:fixed;bottom:0;left:0;right:0;max-width:540px;margin:0 auto;background:var(--card);display:flex;border-top:1px solid var(--line);z-index:100;padding-bottom:env(safe-area-inset-bottom)}
+.tab{flex:1;text-align:center;padding:8px 0;font-size:11px;color:var(--sub);cursor:pointer}
+.tab .ic{font-size:20px;display:block;margin-bottom:1px}
+.tab.active{color:var(--pri)}
+
+/* progress bar */
+.pbar{height:6px;background:#e2e8f0;border-radius:3px;overflow:hidden;margin:8px 0}
+.pbar span{display:block;height:100%;background:var(--ok);transition:width .3s}
+
+/* empty */
+.empty{text-align:center;padding:40px 20px;color:var(--sub)}
+.empty .ic{font-size:48px;margin-bottom:10px}
+
+/* review due badge */
+.due-badge{background:var(--err);color:#fff;font-size:10px;padding:1px 6px;border-radius:8px;margin-left:4px}
+.ok-badge{background:var(--ok);color:#fff;font-size:10px;padding:1px 6px;border-radius:8px}
+
+/* scrollable lists */
+.scroll{overflow-y:auto}
+
+/* modal */
+.modal-mask{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;display:none;align-items:center;justify-content:center;padding:20px}
+.modal-mask.show{display:flex}
+.modal{background:var(--card);border-radius:14px;padding:20px;max-width:90%;max-height:80vh;overflow-y:auto;width:100%}
+.modal h3{margin-bottom:10px}
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- HOME -->
+<div class="page active" id="page-home">
+  <div class="hero">
+    <h2>STM32移动课堂</h2>
+    <div class="sub">从0基础到FreeRTOS+PCB · 工业控制方向</div>
+  </div>
+  <div class="stat-row">
+    <div class="stat-box"><div class="num" id="stCh">0/17</div><div class="lbl">章节</div></div>
+    <div class="stat-box"><div class="num" id="stDone">0</div><div class="lbl">已学课</div></div>
+    <div class="stat-box"><div class="num" id="stQ">0</div><div class="lbl">已做题</div></div>
+    <div class="stat-box"><div class="num" id="stRate">0%</div><div class="lbl">正确率</div></div>
+  </div>
+  <div class="card" id="contCard" style="cursor:pointer" onclick="continueLearn()">
+    <h3>📖 继续学习</h3>
+    <p id="contText">点击开始第一课</p>
+    <div class="pbar"><span id="contProg" style="width:0%"></span></div>
+  </div>
+  <div class="section-title">全部章节（按顺序解锁）</div>
+  <div id="chapList"></div>
+</div>
+
+<!-- CHAPTER LESSONS -->
+<div class="page" id="page-chapter">
+  <div class="topbar"><span class="back" onclick="goHome()">‹</span><h1 id="chTitle">章节</h1></div>
+  <div id="lessonList"></div>
+</div>
+
+<!-- LESSON -->
+<div class="page" id="page-lesson">
+  <div class="topbar"><span class="back" onclick="backFromLesson()">‹</span><h1 id="lsTitle">课程</h1><span class="act" onclick="toggleFav()" id="favBtn">☆</span></div>
+  <div class="lesson-body"><div id="lessonContent"></div></div>
+</div>
+
+<!-- PRACTICE HOME -->
+<div class="page" id="page-prac">
+  <div class="topbar"><h1>练习中心</h1></div>
+  <div class="card" style="display:flex;gap:10px;flex-wrap:wrap">
+    <div class="stat-box" style="flex:1;min-width:80px" onclick="startPractice('order')"><div class="num">📚</div><div class="lbl">顺序练习</div></div>
+    <div class="stat-box" style="flex:1;min-width:80px" onclick="startPractice('random')"><div class="num">🎲</div><div class="lbl">随机刷题</div></div>
+    <div class="stat-box" style="flex:1;min-width:80px" onclick="startPractice('wrong')"><div class="num">❌</div><div class="lbl">错题本<span id="wrongBadge" class="due-badge" style="display:none">0</span></div></div>
+    <div class="stat-box" style="flex:1;min-width:80px" onclick="startPractice('review')"><div class="num">🔁</div><div class="lbl">复习<span id="dueBadge" class="due-badge" style="display:none">0</span></div></div>
+    <div class="stat-box" style="flex:1;min-width:80px" onclick="startPractice('exam')"><div class="num">📝</div><div class="lbl">模拟考</div></div>
+    <div class="stat-box" style="flex:1;min-width:80px" onclick="startPractice('daily')"><div class="num">📅</div><div class="lbl">每日10题</div></div>
+  </div>
+  <div class="section-title">按章节练习</div>
+  <div id="pracChapList"></div>
+  <div class="section-title">学习统计</div>
+  <div class="card">
+    <p>总做题数：<b id="pTotal">0</b></p>
+    <p>正确数：<b id="pRight">0</b></p>
+    <p>错题数：<b id="pWrong">0</b></p>
+    <p>正确率：<b id="pRate">0%</b></p>
+    <button class="btn ghost block" onclick="resetQuiz()">重置做题记录</button>
+  </div>
+</div>
+
+<!-- QUIZ -->
+<div class="page" id="page-quiz">
+  <div class="topbar"><span class="back" onclick="exitQuiz()">‹</span><h1 id="quizTitle">练习</h1><span class="act" id="quizProg">0/0</span></div>
+  <div id="quizArea"></div>
+  <div style="padding:12px">
+    <button class="btn block" id="quizNext" onclick="quizNext()">下一题</button>
+  </div>
+</div>
+
+<!-- ME -->
+<div class="page" id="page-me">
+  <div class="topbar"><h1>我的</h1></div>
+  <div class="hero" style="border-radius:0">
+    <h2 style="font-size:20px">嵌入式学习者</h2>
+    <div class="sub">目标：STM32 + FreeRTOS + PCB</div>
+  </div>
+  <div class="stat-row">
+    <div class="stat-box"><div class="num" id="mCh">0%</div><div class="lbl">章节进度</div></div>
+    <div class="stat-box"><div class="num" id="mDay">0</div><div class="lbl">打卡天数</div></div>
+    <div class="stat-box"><div class="num" id="mFav">0</div><div class="lbl">收藏课程</div></div>
+  </div>
+  <div class="card" onclick="showPage('page-prac')">
+    <h3>📊 做题统计</h3>
+    <p>查看总做题数、正确率、错题本</p>
+  </div>
+  <div class="card" onclick="exportWrong()">
+    <h3>📕 导出错题本</h3>
+    <p>下载错题txt，可打印离线看</p>
+  </div>
+  <div class="card" onclick="alert('长按本页→添加到主屏幕，即可像APP一样使用')">
+    <h3>📱 添加到手机桌面</h3>
+    <p>iOS：Safari分享→添加到主屏幕<br>安卓：浏览器菜单→添加到桌面</p>
+  </div>
+  <div class="card" onclick="if(confirm('确定清空所有学习记录？')){localStorage.clear();location.reload()}">
+    <h3>🗑️ 清空所有数据</h3>
+    <p>章节进度、做题记录、错题、收藏全部清空</p>
+  </div>
+</div>
+
+</div>
+
+<!-- bottom tab -->
+<div class="tabbar">
+  <div class="tab active" data-page="page-home" onclick="showPage('page-home')"><span class="ic">🏠</span>学习</div>
+  <div class="tab" data-page="page-prac" onclick="showPage('page-prac')"><span class="ic">✏️</span>练习</div>
+  <div class="tab" data-page="page-me" onclick="showPage('page-me')"><span class="ic">👤</span>我的</div>
+</div>
+
+<script>
+/* ============================================================
+   课程数据（17章，从0基础到FreeRTOS+PCB）
+   每课：id, 标题, 内容HTML, 关键点, 关联习题id
+   ============================================================ */
+const CHAPTERS = [
+/* ===== 第1章 嵌入式入门 ===== */
+{id:1,ico:'🔌',title:'第1章 嵌入式入门认知',desc:'单片机是什么、能干嘛、你的板子',lessons:[
+ {id:'1-1',title:'1.1 单片机 vs 电脑：到底啥是嵌入式',kp:['单片机=一台超精简的电脑，CPU+内存+外设全在一个芯片里','嵌入式=把单片机嵌进设备里让它干活，看不见但无处不在','你的空调、洗衣机、路由器里都有单片机'],content:`
+<h3>单片机到底是啥？</h3>
+<p>想象一台<b>超超超精简的电脑</b>：CPU、内存(RAM)、硬盘(Flash)、各种接口(USB/串口/GPIO)全都塞进一个指甲盖大小的芯片里——这就是单片机，学名<b>MCU</b>(Microcontroller Unit)。</p>
+<p>它跟电脑的区别：</p>
+<table>
+<tr><th></th><th>电脑</th><th>单片机</th></tr>
+<tr><td>CPU</td><td>几GHz，几核</td><td>几十~几百MHz，1核</td></tr>
+<tr><td>内存</td><td>8GB起</td><td>几KB~几百KB</td></tr>
+<tr><td>硬盘</td><td>几百GB</td><td>几KB~几MB</td></tr>
+<tr><td>操作系统</td><td>Windows/Linux</td><td>没有，或跑FreeRTOS这种小系统</td></tr>
+<tr><td>功耗</td><td>几百瓦</td><td>几毫瓦~几瓦</td></tr>
+<tr><td>价格</td><td>几千上万</td><td>几块~几十块</td></tr>
+</table>
+<div class="kp"><b>一句话：</b>电脑是"全能选手"，单片机是"专职工人"——为某个特定任务而生，便宜、省电、可靠。</div>
+<h3>什么是嵌入式？</h3>
+<p>"嵌入式"就是把单片机<b>嵌到设备里面</b>，让设备变聪明。你家里几乎所有带电的东西里都有它：</p>
+<ul>
+<li>空调：单片机读温度传感器→控制压缩机</li>
+<li>洗衣机：单片机读按键→控制电机正反转</li>
+<li>路由器：单片机跑网络协议→转发数据</li>
+<li>共享单车锁：单片机读扫码→控制电机开锁</li>
+</ul>
+<p>你学的<b>STM32</b>就是目前最主流的单片机系列，意法半导体(ST)出的，工业领域用得最多。</p>
+<div class="tip">💡 为啥叫STM32？ST(意法)+M(微控制器)+32(32位CPU)。你的板子是STM32F407VET6，属于F4系列，Cortex-M4内核，168MHz。</div>
+`},
+ {id:'1-2',title:'1.2 你的板子：STM32F407VET6核心板',kp:['芯片型号STM32F407VET6，LQFP100封装100个脚','512KB Flash（存代码）+192KB RAM（运行内存）','168MHz Cortex-M4内核带FPU浮点运算','只有GPIOA~E五组端口（无F/G/H）','板载2个LED：DS1=PE5，DS2=PE6，低电平点亮'],content:`
+<h3>认识你的板子</h3>
+<p>你手上这块是<b>尚学STM32F407VET6核心板</b>，41块钱，100脚。先把几个关键参数记牢：</p>
+<table>
+<tr><th>参数</th><th>值</th><th>啥意思</th></tr>
+<tr><td>芯片</td><td>STM32F407VET6</td><td>ST的F4系列高性能款</td></tr>
+<tr><td>内核</td><td>Cortex-M4 @168MHz</td><td>ARM的CPU，每秒1.68亿条指令</td></tr>
+<tr><td>Flash</td><td>512KB</td><td>存你的代码，断电不丢</td></tr>
+<tr><td>RAM</td><td>192KB</td><td>运行内存，断电清空</td></tr>
+<tr><td>封装</td><td>LQFP100</td><td>100个引脚，四面分布</td></tr>
+<tr><td>可用端口</td><td>GPIOA~E</td><td>5组，每组最多16个引脚</td></tr>
+</table>
+<div class="kp"><b>板载资源：</b>板上自带2个LED灯和1个按键，是你最早的"练习对象"。</div>
+<ul>
+<li><b>DS1</b>（螺丝旁边的灯）→ 接在 <b>PE5</b> 引脚</li>
+<li><b>DS2</b>（K2按键旁边的灯）→ 接在 <b>PE6</b> 引脚</li>
+<li><b>K2</b> 按键 → 接在某个引脚（后面按键课再说）</li>
+</ul>
+<div class="warn-box">⚠️ 你的灯是<b>低电平点亮</b>：引脚输出0（低电平）灯亮，输出1（高电平）灯灭。这跟很多教程相反，写代码时一定要注意！</div>
+<h3>核心板 vs 开发板</h3>
+<p>你买的是<b>核心板</b>（只有芯片+最小电路），不是那种500块的"探索者"开发板。核心板的好处：</p>
+<ul>
+<li>便宜（41 vs 500）</li>
+<li>外设靠杜邦线自己接→训练电路思维，直接为后期PCB打基础</li>
+<li>82个IO+512KB Flash对学习完全够用</li>
+</ul>
+`},
+ {id:'1-3',title:'1.3 单片机是怎么跑起来的（上电复位流程）',kp:['上电→复位→从Flash地址0x08000000取第一条指令执行','main函数不是第一条执行的，启动文件先做初始化','程序写在Flash里，永远循环运行（while(1)）'],content:`
+<h3>按下电源那一刻发生了什么？</h3>
+<p>你给板子通电后，芯片不是直接跑你的main函数，而是有一套固定流程：</p>
+<ol>
+<li><b>上电复位</b>：芯片所有寄存器恢复出厂状态</li>
+<li><b>读取启动文件</b>：startup_stm32f407xx.s（汇编）设置栈指针、调用SystemInit配时钟</li>
+<li><b>进入main函数</b>：开始跑你写的代码</li>
+<li><b>while(1)死循环</b>：你的代码在这里反复执行，直到断电</li>
+</ol>
+<div class="kp"><b>关键点：</b>单片机程序必须有个死循环（while(1)或for(;;)），不然main跑完芯片就"飞了"（跑飞=执行到未知区域）。这跟电脑程序"跑完退出"完全不同。</div>
+<h3>代码存在哪？</h3>
+<p>你编译生成的.hex/.bin文件通过ST-LINK下载到芯片的<b>Flash</b>（0x08000000地址开始）。Flash的特点：</p>
+<ul>
+<li><b>断电不丢</b>：下次上电自动运行</li>
+<li><b>可擦写</b>：能重新下载覆盖（约1万次寿命）</li>
+</ul>
+<p>运行时的临时数据（变量）存在<b>RAM</b>里，断电就没了。</p>
+`}
+]},
+/* ===== 第2章 开发环境 ===== */
+{id:2,ico:'🛠️',title:'第2章 开发环境搭建',desc:'Keil、ST-LINK、烧录全流程',lessons:[
+ {id:'2-1',title:'2.1 Keil MDK安装与工程创建',kp:['Keil MDK是STM32最主流的IDE','工程三件套：.uvprojx工程文件+源码+启动文件','编译F7，下载F8'],content:`
+<h3>装什么软件？</h3>
+<p>开发STM32最常用的IDE是<b>Keil MDK-ARM</b>（µVision5）。你的工程在：<br><code>e:\\stm32\\代码\\LED_Blink\\LED_Blink.uvprojx</code></p>
+<h3>Keil工程包含什么？</h3>
+<ul>
+<li><b>.uvprojx</b>：工程配置文件（双击打开）</li>
+<li><b>startup_stm32f407xx.s</b>：启动文件（汇编，上电初始化）</li>
+<li><b>system_stm32f4xx.c</b>：系统时钟配置</li>
+<li><b>main.c</b>：你写代码的地方</li>
+<li><b>stm32f407xx.h</b>：寄存器定义头文件（让你能写GPIOE->BSRR）</li>
+</ul>
+<div class="tip">💡 Define要设成 <code>STM32F407xx</code>，这样头文件才会定义正确的寄存器地址。</div>
+<h3>编译和下载快捷键</h3>
+<table>
+<tr><th>按键</th><th>功能</th></tr>
+<tr><td>F7</td><td>编译（Build），检查语法错误</td></tr>
+<tr><td>F8</td><td>下载到板子（Flash）</td></tr>
+</table>
+`},
+ {id:'2-2',title:'2.2 ST-LINK接线（4根线）',kp:['SWCLK→JTAG第9针','SWDIO→第7针','GND→第4针','RST→第15针（可选，救砖用）','板子Micro USB独立供电，VCC不接'],content:`
+<h3>ST-LINK是干嘛的？</h3>
+<p>ST-LINK是<b>下载器/调试器</b>，把你电脑编译好的程序"烧"进单片机Flash里，还能在线调试（单步执行、看变量值）。</p>
+<h3>接线方法（4根线）</h3>
+<table>
+<tr><th>ST-LINK端</th><th>→</th><th>板子JTAG口</th></tr>
+<tr><td>② SWCLK</td><td>→</td><td>第9针</td></tr>
+<tr><td>④ SWDIO</td><td>→</td><td>第7针</td></tr>
+<tr><td>⑤/⑥ GND</td><td>→</td><td>第4针</td></tr>
+<tr><td>① RST</td><td>→</td><td>第15针（可选）</td></tr>
+</table>
+<div class="warn-box">⚠️ 板子用Micro USB独立供电，<b>VCC不接</b>！ST-LINK的3.3V引脚别接板子，否则可能烧芯片。</div>
+<div class="kp"><b>BOOT0跳帽</b>：你的板子BOOT0跳帽在B0+GND位置，这样上电从Flash启动（正常运行模式）。</div>
+`},
+ {id:'2-3',title:'2.3 烧录流程与常见坑',kp:['F7编译→0错误→F8下载→按RESET键运行','山寨ST-LINK不能自动复位，必须手动按RESET','下载后灯不亮=按一下板子RESET键'],content:`
+<h3>标准烧录流程</h3>
+<ol>
+<li>写完代码，按 <b>F7</b> 编译</li>
+<li>底部显示 <code>0 Error(s)</code> 才能下一步（Warning可以暂时不管）</li>
+<li>按 <b>F8</b> 下载，Keil提示"Programming Done"</li>
+<li><b>按一下板子上的RESET按键</b>，程序开始运行</li>
+</ol>
+<div class="warn-box">⚠️ 你的山寨ST-LINK有固件缺陷：<b>自动复位功能失效</b>。所以下载完必须手动按RESET，不然新程序不运行。HW RESET、SYSRESETREQ、Reset and Run勾选全部无效——这不是接线问题。</div>
+<h3>救砖：Connect Under Reset</h3>
+<p>如果你的程序写死了（比如写了死循环禁用了下载），Keil连不上芯片时：按住板子RESET键→点Keil下载→松开RESET，就能强制连接。RST线就是为这个准备的。</p>
+<div class="kp"><b>记死这个流程：</b>F7→F8→按RESET。插拔USB没用，按RESET才管用。</div>
+`}
+]},
+/* ===== 第3章 C语言基础 ===== */
+{id:3,ico:'📝',title:'第3章 C语言基础（嵌入式够用版）',desc:'只学点灯阶段需要的语法',lessons:[
+ {id:'3-1',title:'3.1 最小程序结构与变量',kp:['main是程序入口，有且只有一个','int整数/float小数/char字符','变量要先声明再用','printf用%d%f%c对应类型'],content:`
+<h3>一个最小的C程序</h3>
+<pre><code>#include &lt;stdio.h&gt;          // 引入标准输入输出库
+
+int main()                   // 程序入口，有且只有一个
+{
+    printf("hello C\\n");     // 打印文字，\\n是换行
+    return 0;                // 正常结束
+}</code></pre>
+<p>单片机里没有printf（没屏幕），但结构一样，你的点灯程序也是从main开始。</p>
+<h3>变量：存数据的小盒子</h3>
+<pre><code>int    age = 33;            // 整数，4字节
+float  temp = 36.5f;        // 小数，4字节
+char   flag = 'Y';          // 单个字符，1字节</code></pre>
+<div class="kp"><b>规则：</b>变量必须先声明（告诉编译器叫啥、啥类型）才能用。类型决定占多大空间、能存什么。</div>
+`},
+ {id:'3-2',title:'3.2 for循环（点灯核心）',kp:['for(初始化;条件;更新){循环体}','i从0开始，i<5执行5次，i值0,1,2,3,4','循环体是大括号里的代码，重复执行'],content:`
+<h3>for循环的标准形状</h3>
+<pre><code>for(int i = 0; i < 5; i++)
+{
+    // 这里重复执行5次
+}</code></pre>
+<p>三个部分用分号隔开：</p>
+<ol>
+<li><code>int i = 0</code>：计数员i从0开始（只执行1次）</li>
+<li><code>i < 5</code>：每次进来前问"i还小于5吗？"是→进，否→退出</li>
+<li><code>i++</code>：每轮结束i加1（i=i+1的简写）</li>
+</ol>
+<div class="kp"><b>闪5次灯的写法：</b>把"亮→延时→灭→延时"这4行塞进for的大括号，自动重复5次，不用复制粘贴5遍。</div>
+`},
+ {id:'3-3',title:'3.3 位运算三件套（必背）',kp:['置1用 |=','清0用 &= ~（波浪号不能少）','翻转用 ^=','1<<n 表示第n位放个1'],content:`
+<h3>把寄存器想成32盏小灯</h3>
+<p>STM32的寄存器是32位的，每位只能是0或1。我们的目标永远是：<b>只动某一位，其他31位不碰</b>。</p>
+<h3>三件套（背下来）</h3>
+<table>
+<tr><th>符号</th><th>动作</th><th>点灯用途</th></tr>
+<tr><td><code>|=</code></td><td>某位置1</td><td>开时钟、设输出模式</td></tr>
+<tr><td><code>&amp;= ~</code></td><td>某位清0</td><td>MODER先清零</td></tr>
+<tr><td><code>^=</code></td><td>某位翻转</td><td>闪灯、切换状态</td></tr>
+</table>
+<pre><code>REG |=  (1 << 4);    // 第4位置1
+REG &= ~(1 << 4);    // 第4位清0（波浪号不能丢！丢了会清掉所有位）
+REG ^=  (1 << 5);    // 第5位翻转（0变1，1变0）</code></pre>
+<div class="warn-box">⚠️ 清0的波浪号~绝对不能少！<code>REG &amp;= (1<<4)</code> 会把除第4位外的所有位都清成0，灭门惨案。</div>
+<div class="kp"><b>移位：</b><code>1 << 4</code> = 二进制10000 = 十进制16，意思是"第4位放个1"。</div>
+`},
+ {id:'3-4',title:'3.4 函数与数组（预告）',kp:['函数=打包一段代码，起个名就能反复调用','数组=同类型变量排排坐，用下标访问','GPIOE->MODER 中 -> 是结构体指针访问成员'],content:`
+<h3>函数：打包代码</h3>
+<pre><code>void Delay(volatile uint32_t count)   // void=无返回值
+{
+    while(count--);                    // count减到0就停
+}
+Delay(5000000);   // 调用，等大约1秒</code></pre>
+<h3>数组：一排变量</h3>
+<pre><code>int pins[4] = {5, 6, 7, 8};   // 4个整数排排坐
+pins[0];   // 5（下标从0开始）
+pins[3];   // 8</code></pre>
+<div class="tip">💡 <code>GPIOE->MODER</code> 读作"GPIOE的MODER"。GPIOE是指向硬件寄存器组的<b>结构体指针</b>，<code>-></code>就是"指针的成员"。等学到指针再深入，现在会用就行。</div>
+`}
+]},
+/* ===== 第4章 点灯 ===== */
+{id:4,ico:'💡',title:'第4章 点灯（GPIO输出）',desc:'RCC/MODER/BSRR三大寄存器详解',lessons:[
+ {id:'4-1',title:'4.1 一个LED怎么亮（电路原理）',kp:['LED有正负极，长脚正短脚负','电流从正极流向负极才亮','你的板载LED是"低电平点亮"：引脚输出0亮，输出1灭'],content:`
+<h3>LED的工作原理</h3>
+<p>LED（发光二极管）是<b>单向导电</b>的：电流只能从正极(阳极)流向负极(阴极)，反过来不亮。</p>
+<p>板子上的LED接法（低电平点亮）：</p>
+<pre>3.3V ──[电阻]──|>|── PE5引脚</pre>
+<ul>
+<li>PE5输出<b>0</b>（低电平=0V）：电流从3.3V经LED流向PE5，<b>灯亮</b></li>
+<li>PE5输出<b>1</b>（高电平=3.3V）：两端电压相等，无电流，<b>灯灭</b></li>
+</ul>
+<div class="warn-box">⚠️ 这跟直觉相反！很多教程是"输出1灯亮"，那是LED接在GND和引脚之间。你的板子LED接在3.3V和引脚之间，所以<b>输出0才亮</b>。</div>
+`},
+ {id:'4-2',title:'4.2 寄存器是什么',kp:['寄存器是芯片里的特殊内存，每个有固定地址','往寄存器写值=给硬件下命令','读寄存器=查硬件状态','STM32寄存器通过结构体指针访问：GPIOE->BSRR'],content:`
+<h3>寄存器：跟硬件对话的窗口</h3>
+<p>芯片里有很多"特殊内存"叫<b>寄存器</b>，每个对应一个硬件功能。你往寄存器写一个数，就是给硬件下命令；读它就是查硬件状态。</p>
+<p>点灯要操作3个寄存器：</p>
+<table>
+<tr><th>寄存器</th><th>中文</th><th>作用</th></tr>
+<tr><td>RCC->AHB1ENR</td><td>时钟使能</td><td>给GPIOE通电（开时钟）</td></tr>
+<tr><td>GPIOE->MODER</td><td>模式寄存器</td><td>设PE5为输出模式</td></tr>
+<tr><td>GPIOE->BSRR</td><td>置位复位寄存器</td><td>控制PE5输出高/低电平</td></tr>
+</table>
+<div class="kp"><b>访问方式：</b><code>GPIOE->BSRR</code> 就是"访问GPIOE端口的BSRR寄存器"。GPIOE是头文件定义好的地址，-> 是结构体指针访问成员。</div>
+`},
+ {id:'4-3',title:'4.3 RCC时钟：为什么先开时钟',kp:['外设默认关时钟省电，要用必须先开','GPIOE挂在AHB1总线上','RCC->AHB1ENR |= (1<<4) 开GPIOE时钟','不开时钟操作GPIO无效'],content:`
+<h3>时钟=心脏</h3>
+<p>单片机里"时钟"不是手表，而是<b>给外设供电的开关</b>。为了省电，所有外设默认是关的，你要用哪个外设必须先开它的时钟。</p>
+<p>GPIOE挂在<b>AHB1总线</b>上，开时钟的代码：</p>
+<pre><code>RCC->AHB1ENR |= (1 << 4);   // 第4位置1 = 开GPIOE时钟</code></pre>
+<p>为什么是第4位？查手册：AHB1ENR寄存器第0位是GPIOA，第1位GPIOB...第4位GPIOE。</p>
+<div class="warn-box">⚠️ <b>不开时钟就操作GPIO，写什么都没用</b>。这是新手最常见的错误——灯死活不亮，查半天发现时钟没开。</div>
+<div class="kp"><b>记忆：</b>A=0,B=1,C=2,D=3,E=4。开哪个端口就把第几位设1。</div>
+`},
+ {id:'4-4',title:'4.4 MODER模式寄存器（双位配置）⭐',kp:['每个引脚占2位（4种模式）','引脚n的起始位=n*2','PE5从第10位开始（5*2=10）','先清零 &=~(3<<(5*2))，再设输出 |=(1<<(5*2))'],content:`
+<h3>为什么是2位？</h3>
+<p>引脚有4种模式，1位只能表示0和1（2种），所以<b>每个引脚分2位</b>：</p>
+<table>
+<tr><th>值</th><th>模式</th></tr>
+<tr><td>00</td><td>输入（默认）</td></tr>
+<tr><td>01</td><td>输出（点灯要的）</td></tr>
+<tr><td>10</td><td>复用功能</td></tr>
+<tr><td>11</td><td>模拟</td></tr>
+</table>
+<h3>引脚n的起始位 = n×2</h3>
+<pre>PE0: 位0-1
+PE1: 位2-3
+PE2: 位4-5
+PE5: 位10-11   ← 5×2=10
+PE6: 位12-13</pre>
+<h3>配置PE5为输出（两步走）</h3>
+<pre><code>GPIOE->MODER &= ~(3 << (5 * 2));   // 第1步：把PE5的两位清成00
+GPIOE->MODER |=  (1 << (5 * 2));   // 第2步：写成01（输出）</code></pre>
+<div class="kp"><b>为什么用3？</b>3的二进制是11，移位后正好盖住PE5的两个位，一起清掉。用1只能清一个位，另一个残留。</div>
+<div class="warn-box">⚠️ 必须先清再设！直接|=(1<<10)如果原来那两位是10，结果变成11（模拟模式），灯不亮。</div>
+`},
+ {id:'4-5',title:'4.5 BSRR置位复位寄存器⭐',kp:['BSRR分两半：低16位置高，高16位拉低','1<<n (n<16)：引脚输出高电平','1<<(n+16)：引脚输出低电平','你的灯低电平亮：亮用+16，灭不用+16'],content:`
+<h3>BSRR的32位分两半</h3>
+<pre>位31 ──── 位16 │ 位15 ──── 位0
+  拉低区(Reset)  │  置高区(Set)
+  写1→引脚变0    │  写1→引脚变1</pre>
+<table>
+<tr><th>代码</th><th>落在</th><th>引脚电平</th><th>你的灯</th></tr>
+<tr><td><code>1 << 5</code></td><td>低16位</td><td>PE5变高</td><td>灭</td></tr>
+<tr><td><code>1 << (5+16)</code></td><td>高16位</td><td>PE5变低</td><td>亮</td></tr>
+</table>
+<div class="kp"><b>口诀：</b>低区置高，高区拉低，<b>加16就是反向操作</b>。</div>
+<h3>完整点灯代码</h3>
+<pre><code>// 开时钟
+RCC->AHB1ENR |= (1 << 4);
+// PE5设输出
+GPIOE->MODER &= ~(3 << (5 * 2));
+GPIOE->MODER |=  (1 << (5 * 2));
+// 点亮DS1
+GPIOE->BSRR = (1 << (5 + 16));   // PE5低电平，灯亮</code></pre>
+<div class="tip">💡 BSRR是"写1生效，写0无效"，所以不用|=，直接=赋值就行，不会影响其他引脚。</div>
+`},
+ {id:'4-6',title:'4.6 ODR输出数据寄存器与翻转',kp:['ODR直接反映引脚电平，读=查状态，写=设状态','ODR^=(1<<n)翻转第n位','翻两次=没翻（偶数次抵消）'],content:`
+<h3>ODR：引脚状态镜像</h3>
+<p>ODR寄存器的值直接等于引脚的输出电平。写ODR也能控制灯，但要注意会影响整个端口。</p>
+<h3>翻转闪灯（另一种写法）</h3>
+<pre><code>GPIOE->ODR ^= (1 << 5);   // PE5电平翻转一次</code></pre>
+<p>执行一次：原来亮→灭，原来灭→亮。放在while循环里反复执行就是闪灯。</p>
+<div class="kp"><b>异或翻转规律：</b>执行奇数次改变状态，偶数次回到原状。按一下按键切换灯的开关就靠这个。</div>
+`},
+ {id:'4-7',title:'4.7 交替闪灯完整代码',kp:['PE5和PE6各配一次输出','亮A灭B→延时→灭A亮B→延时，循环','两个灯同时操作用 | 合并'],content:`
+<h3>两灯交替闪</h3>
+<pre><code>#include "stm32f407xx.h"
+
+void Delay(volatile uint32_t count){ while(count--); }
+
+int main(void)
+{
+    RCC->AHB1ENR |= (1 << 4);              // 开GPIOE时钟
+
+    GPIOE->MODER &= ~(3 << (5*2));         // PE5输出
+    GPIOE->MODER |=  (1 << (5*2));
+    GPIOE->MODER &= ~(3 << (6*2));         // PE6输出
+    GPIOE->MODER |=  (1 << (6*2));
+
+    while(1)
+    {
+        GPIOE->BSRR = (1 << (5+16));       // DS1亮
+        GPIOE->BSRR = (1 << 6);            // DS2灭
+        Delay(5000000);
+
+        GPIOE->BSRR = (1 << 5);            // DS1灭
+        GPIOE->BSRR = (1 << (6+16));       // DS2亮
+        Delay(5000000);
+    }
+}</code></pre>
+<div class="kp"><b>两灯同时灭：</b><code>GPIOE->BSRR = (1<<5)|(1<<6);</code> 竖线|把两个命令合并。</div>
+`}
+]},
+/* ===== 第5章 流水灯 ===== */
+{id:5,ico:'🌈',title:'第5章 流水灯与循环',desc:'for循环控制灯效',lessons:[
+ {id:'5-1',title:'5.1 for循环闪N次',kp:['把"亮延时灭延时"塞进for大括号','i从0到N-1循环N次','循环外加全灭停顿区分组'],content:`
+<h3>闪5次的写法</h3>
+<pre><code>int i;
+for(i = 0; i < 5; i++)
+{
+    GPIOE->BSRR = (1 << (5+16));   // 亮
+    Delay(3000000);
+    GPIOE->BSRR = (1 << 5);        // 灭
+    Delay(3000000);
+}</code></pre>
+<p>大括号里的4行重复执行5次=闪5下。</p>
+<div class="kp"><b>int i;</b> 要写在循环外面（或for里面），这是"声明变量"。</div>
+`},
+ {id:'5-2',title:'5.2 三种灯效：同闪/快交替/慢交替',kp:['同闪：两灯一起亮一起灭用 | 合并','快慢由Delay数字决定','模式间加全灭停顿'],content:`
+<h3>同闪（两灯一起）</h3>
+<pre><code>GPIOE->BSRR = (1 << (5+16)) | (1 << (6+16));  // 都亮
+Delay(3000000);
+GPIOE->BSRR = (1 << 5) | (1 << 6);            // 都灭
+Delay(3000000);</code></pre>
+<h3>快交替 vs 慢交替</h3>
+<p>代码几乎一样，只差Delay数字：</p>
+<ul>
+<li>快：Delay(800000) ≈ 0.15秒</li>
+<li>慢：Delay(5000000) ≈ 1秒</li>
+</ul>
+<div class="kp"><b>节奏全看Delay数字</b>，同一段逻辑改数字就变风格。</div>
+`},
+ {id:'5-3',title:'5.3 软件延时的真相',kp:['Delay(n)是空转n次，不是n毫秒','真实时间跟CPU频率有关','现阶段用实测调节奏，学SysTick后能精确延时'],content:`
+<h3>Delay(5000000)不是5秒</h3>
+<p>括号里是<b>空转循环次数</b>，不是时间单位。真实等多久取决于CPU速度。</p>
+<p>你板子上粗略实测：</p>
+<table>
+<tr><th>Delay值</th><th>约等于</th></tr>
+<tr><td>5,000,000</td><td>~1秒</td></tr>
+<tr><td>3,000,000</td><td>~0.6秒</td></tr>
+<tr><td>800,000</td><td>~0.15秒</td></tr>
+</table>
+<div class="tip">💡 等学到SysTick定时器，就能写<code>Delay_ms(500)</code>精准延时500毫秒，告别猜数字。</div>
+`}
+]},
+/* ===== 第6章 按键输入 ===== */
+{id:6,ico:'🔘',title:'第6章 按键输入',desc:'GPIO输入、上拉下拉、消抖',lessons:[
+ {id:'6-1',title:'6.1 GPIO输入模式',kp:['输入模式读引脚电平：GPIOE->IDR & (1<<n)','IDR第n位=1表示高电平，=0低电平','按键按下=接通，松开=断开'],content:`
+<h3>读引脚电平</h3>
+<p>把引脚设为输入模式后，就能读外部信号（比如按键）：</p>
+<pre><code>GPIOE->MODER &= ~(3 << (n*2));   // 清00=输入模式（默认就是，可省略）
+
+if(GPIOE->IDR & (1 << n))         // 第n位是1？
+    // 高电平
+else
+    // 低电平</code></pre>
+<div class="kp"><b>IDR</b>=Input Data Register，只读，反映引脚当前电平。</div>
+`},
+ {id:'6-2',title:'6.2 上拉下拉电阻',kp:['按键松开时引脚悬空，电平不确定','上拉电阻：松开时高电平，按下时低','下拉电阻：松开时低电平，按下时高','STM32内部有上下拉，PUPDR寄存器配置'],content:`
+<h3>为什么需要上拉/下拉？</h3>
+<p>按键松开时，如果引脚什么都不接叫<b>悬空</b>，电平可能是0也可能是1（受干扰），读到的值乱跳。必须用电阻把它"拉"到一个确定电平。</p>
+<table>
+<tr><th>方式</th><th>松开时</th><th>按下时</th></tr>
+<tr><td>上拉</td><td>高电平(1)</td><td>低电平(0)</td></tr>
+<tr><td>下拉</td><td>低电平(0)</td><td>高电平(1)</td></tr>
+</table>
+<p>STM32内部自带上下拉电阻，用PUPDR寄存器配：</p>
+<pre><code>GPIOE->PUPDR |= (1 << (n*2));   // 上拉
+GPIOE->PUPDR |= (2 << (n*2));   // 下拉</code></pre>
+`},
+ {id:'6-3',title:'6.3 按键消抖',kp:['机械按键按下/松开会抖动几毫秒','表现：按一次检测到多次','软件消抖：检测到变化后延时10-20ms再判断'],content:`
+<h3>抖动是什么？</h3>
+<p>机械按键按下瞬间，金属片会弹跳好几次才稳定，导致电平在几毫秒内反复跳变。如果不处理，按一次可能被当成好几次。</p>
+<h3>软件消抖</h3>
+<pre><code>if(按键按下)
+{
+    Delay(20000);   // 延时约20ms，等抖动过去
+    if(按键还按着)  // 再确认一次
+    {
+        // 真的按下了，执行动作
+    }
+}</code></pre>
+<div class="kp"><b>消抖延时10~20ms</b>，够等机械稳定。后面学中断可以用定时器做更优雅的消抖。</div>
+`}
+]},
+/* ===== 第7章 外部中断 ===== */
+{id:7,ico:'⚡',title:'第7章 外部中断EXTI',desc:'中断概念、NVIC、按键中断',lessons:[
+ {id:'7-1',title:'7.1 中断是什么',kp:['中断=暂停当前活，先处理紧急事件','EXTI是外部中断，引脚电平变化触发','比轮询省CPU：不用一直盯着按键'],content:`
+<h3>中断的生活比喻</h3>
+<p>你在看书（主循环），突然电话响了（中断触发），你放下书去接电话（中断服务函数），接完回来继续看书（恢复主循环）。这就是中断。</p>
+<p>按键轮询是"每隔一会儿看一眼按键"，浪费CPU；按键中断是"按键变化时自动通知你"，高效。</p>
+`},
+ {id:'7-2',title:'7.2 EXTI配置步骤',kp:['SYSCFG选引脚源','EXTI设触发沿（上升/下降/双边）','NVIC使能中断并设优先级','写中断服务函数EXTI[x]_IRQHandler'],content:`
+<h3>配置外部中断4步</h3>
+<ol>
+<li>SYSCFG_EXTICR：选哪个引脚连到EXTI线</li>
+<li>EXTI_RTSR/FTSR：选上升沿/下降沿触发</li>
+<li>EXTI_IMR：使能该中断线</li>
+<li>NVIC：使能中断通道+设优先级</li>
+</ol>
+<p>中断服务函数名固定：<code>EXTI0_IRQHandler</code>~<code>EXTI15_10_IRQHandler</code>，在里面清标志位+做处理。</p>
+<div class="warn-box">⚠️ 中断函数里必须清挂起位 <code>EXTI->PR |= (1<<n)</code>，否则会一直进中断。</div>
+`}
+]},
+/* ===== 第8章 串口 ===== */
+{id:8,ico:'📡',title:'第8章 串口通信USART',desc:'最常用的调试手段',lessons:[
+ {id:'8-1',title:'8.1 串口基础',kp:['串口=两根线(TX/RX)全双工通信','波特率=每秒传多少位，常用9600/115200','TX发RX收，交叉接线：TX接对方RX','USB转TTL模块连接电脑'],content:`
+<h3>串口是什么</h3>
+<p>串口(UART/USART)是单片机和外界通信最常用的方式，就2根数据线：TX(发)和RX(收)，加上GND共3根。</p>
+<ul>
+<li><b>全双工</b>：发和收能同时进行</li>
+<li><b>波特率</b>：通信速度，双方必须一致，常用115200</li>
+<li><b>接线交叉</b>：板子TX接模块RX，板子RX接模块TX</li>
+</ul>
+<div class="warn-box">⚠️ 你的板子Micro USB直连PA11/PA12（USB），没有USB转串口芯片，所以串口课需要额外买<b>USB转TTL模块</b>（CH340/CP2102）。</div>
+`},
+ {id:'8-2',title:'8.2 printf重定向',kp:['重写fputc函数把printf输出到串口','这样就能用printf调试','微库MicroLIB要勾选'],content:`
+<h3>让printf从串口输出</h3>
+<p>单片机没有屏幕，printf默认没地方输出。重写一个函数把printf的字符转发到串口：</p>
+<pre><code>int fputc(int ch, FILE *f)
+{
+    while(!(USART1->SR & (1<<7)));  // 等发送寄存器空
+    USART1->DR = ch;                // 发一个字节
+    return ch;
+}</code></pre>
+<p>然后就能用 <code>printf("温度=%d\\n", temp);</code> 从串口助手看输出了。</p>
+<div class="tip">💡 Keil里要勾选 Options→Target→Use MicroLIB，printf才能用。</div>
+`},
+ {id:'8-3',title:'8.3 串口收发指令控制LED',kp:['收到数据触发USART中断','解析收到的字符执行动作','如收到字符1亮灯、字符0灭灯'],content:`
+<h3>串口控制LED</h3>
+<p>在串口接收中断里判断收到的字节：</p>
+<pre><code>void USART1_IRQHandler()
+{
+    if(USART1->SR & (1<<5))   // 收到数据
+    {
+        char c = USART1->DR;
+        if(c == '1') GPIOE->BSRR = (1 << (5+16));  // 亮
+        if(c == '0') GPIOE->BSRR = (1 << 5);       // 灭
+    }
+}</code></pre>
+`}
+]},
+/* ===== 第9章 I2C ===== */
+{id:9,ico:'🔗',title:'第9章 I2C总线',desc:'OLED屏、传感器常用',lessons:[
+ {id:'9-1',title:'9.1 I2C基础',kp:['I2C=2根线(SCL时钟+SDA数据)','半双工，支持一主多从','每个从设备有地址','SCL高电平时SDA下降沿=起始信号'],content:`
+<h3>I2C是什么</h3>
+<p>I2C只用2根线就能挂很多设备（OLED、温湿度传感器、EEPROM等），适合板内通信。</p>
+<ul>
+<li><b>SCL</b>：时钟线，由主机产生</li>
+<li><b>SDA</b>：数据线，双向</li>
+<li><b>地址</b>：每个从设备有7位地址，主机先发送地址选中目标</li>
+</ul>
+`},
+ {id:'9-2',title:'9.2 I2C驱动OLED',kp:['OLED常见地址0x78','发送命令0x00，发送数据0x40','显存是一页一页写的'],content:`
+<h3>OLED显示</h3>
+<p>0.96寸OLED(128×64)用I2C驱动，常见地址0x78。写入时先发0x00表示命令、0x40表示显示数据。</p>
+<p>典型流程：初始化→清屏→设置光标位置→发送要显示的字模数据。</p>
+`}
+]},
+/* ===== 第10章 SPI ===== */
+{id:10,ico:'🚀',title:'第10章 SPI总线',desc:'高速通信，Flash/TFT屏',lessons:[
+ {id:'10-1',title:'10.1 SPI基础',kp:['SPI=4根线(SCK/MOSI/MISO/CS)','全双工，比I2C快','一主多从靠CS片选','时钟极性CPOL/相位CPHA要匹配'],content:`
+<h3>SPI是什么</h3>
+<p>SPI是高速同步串行总线，4根线：SCK(时钟)、MOSI(主出从入)、MISO(主入从出)、CS(片选)。比I2C快很多，适合TFT屏、Flash、ADC等高速设备。</p>
+`},
+ {id:'10-2',title:'10.2 SPI读写W25Qxx Flash',kp:['W25Q64=64Mbit SPI Flash','发命令+地址+数据','读ID命令0x9F','扇区擦除0x20，页编程0x02'],content:`
+<h3>SPI Flash</h3>
+<p>W25Qxx系列是常见SPI Flash，存字库、参数、日志。操作流程：拉低CS→发命令→发地址→读写数据→拉高CS。</p>
+`}
+]},
+/* ===== 第11章 定时器 ===== */
+{id:11,ico:'⏱️',title:'第11章 定时器',desc:'精准延时、定时中断',lessons:[
+ {id:'11-1',title:'11.1 SysTick系统滴答定时器',kp:['Cortex-M内核自带的24位倒计时器','配好后能精确延时微秒/毫秒','SysTick_Config(时钟频率/1000)=1ms中断'],content:`
+<h3>SysTick精准延时</h3>
+<p>告别空转Delay！SysTick是内核自带定时器，系统时钟168MHz时：</p>
+<pre><code>SysTick_Config(168000000 / 1000);  // 1ms中断一次
+// 全局变量ms计数，延时函数等ms到目标值</code></pre>
+`},
+ {id:'11-2',title:'11.2 通用定时器TIM',kp:['TIM2~TIM5是32位通用定时器','PSC预分频+ARR自动重装载','更新事件触发中断','定时时间=(PSC+1)*(ARR+1)/时钟'],content:`
+<h3>定时器定时公式</h3>
+<p>定时时间 = (PSC+1) × (ARR+1) ÷ 定时器时钟频率</p>
+<p>比如168MHz，想定时1秒：PSC=16799（分到10kHz），ARR=9999（10000次=1秒）。</p>
+`}
+]},
+/* ===== 第12章 PWM ===== */
+{id:12,ico:'🌊',title:'第12章 PWM脉宽调制',desc:'呼吸灯、舵机、电机调速',lessons:[
+ {id:'12-1',title:'12.1 PWM原理',kp:['PWM=周期固定、占空比变化的方波','占空比=高电平时间/周期','占空比决定平均电压→LED亮度/电机转速'],content:`
+<h3>PWM是什么</h3>
+<p>PWM就是快速开关，开关的比例(占空比)决定输出平均效果。占空比50%的方波加到LED上，人眼看到的是半亮。</p>
+`},
+ {id:'12-2',title:'12.2 定时器输出PWM',kp:['TIMx_CHx引脚输出PWM','CCR寄存器决定占空比','ARR决定频率','呼吸灯：CCR从0加到ARR再减回'],content:`
+<h3>呼吸灯</h3>
+<p>用定时器的PWM模式，让CCR值从0慢慢增到ARR（灯渐亮），再减回0（灯渐灭），循环就是呼吸灯效果。</p>
+`}
+]},
+/* ===== 第13章 ADC ===== */
+{id:13,ico:'📈',title:'第13章 ADC模数转换',desc:'读模拟电压',lessons:[
+ {id:'13-1',title:'13.1 ADC基础',kp:['ADC把模拟电压转成数字量','F407是12位ADC，值0~4095对应0~3.3V','转换值=电压/3.3*4095'],content:`
+<h3>ADC是什么</h3>
+<p>单片机只能处理数字(0/1)，但传感器输出的是模拟电压（比如电位器0~3.3V连续变化）。ADC把模拟电压转成数字。</p>
+<p>12位ADC：0V→0，3.3V→4095，线性对应。读电位器电压= <code>ADC值 * 3.3 / 4095</code>。</p>
+`},
+ {id:'13-2',title:'13.2 DMA搬运ADC数据',kp:['DMA=直接内存访问，不用CPU参与','ADC+DMA可以连续采样多通道','不占用CPU，适合高速采集'],content:`
+<h3>DMA</h3>
+<p>DMA是"搬运工"，能把ADC数据自动搬到内存，CPU不用管。ADC+DMA可以同时扫多个通道，CPU该干嘛干嘛。</p>
+`}
+]},
+/* ===== 第14章 综合项目 ===== */
+{id:14,ico:'🏗️',title:'第14章 综合项目',desc:'把所学串起来',lessons:[
+ {id:'14-1',title:'14.1 温湿度采集显示',kp:['DHT11单总线读温湿度','OLED显示数值','串口打印调试'],content:`
+<h3>项目：环境监测</h3>
+<p>DHT11温湿度传感器→单片机读数据→OLED显示+串口打印。涉及GPIO(单总线时序)、I2C(OLED)、USART(printf)。</p>
+`},
+ {id:'14-2',title:'14.2 继电器远程开关',kp:['继电器=用小电流控制大电流','GPIO控制继电器线圈','可以控制220V家电'],content:`
+<h3>项目：远程开关</h3>
+<p>单片机GPIO控制继电器模块，继电器另一端接220V电器。配合WiFi模块就能手机远程控制。注意强电安全！</p>
+`},
+ {id:'14-3',title:'14.3 WiFi上云(ESP8266)',kp:['ESP8266通过AT指令联网','单片机串口发AT指令','连接WiFi→连接服务器→收发数据'],content:`
+<h3>项目：物联网</h3>
+<p>ESP8266 WiFi模块用AT指令操作，单片机通过串口发AT指令让它连WiFi、连云服务器，实现手机远程看数据、遥控设备。</p>
+`}
+]},
+/* ===== 第15章 FreeRTOS ===== */
+{id:15,ico:'🌀',title:'第15章 FreeRTOS实时系统',desc:'多任务并发',lessons:[
+ {id:'15-1',title:'15.1 为什么需要RTOS',kp:['裸机while(1)只能顺序执行','多任务：采集/显示/通信同时跑','FreeRTOS是最流行的嵌入式RTOS'],content:`
+<h3>裸机的痛点</h3>
+<p>裸机程序是一个大while(1)，所有任务排队执行。如果显示任务卡住了，采集就停了。RTOS让多个任务"同时"运行（其实是快速切换），互不阻塞。</p>
+`},
+ {id:'15-2',title:'15.2 任务创建与调度',kp:['xTaskCreate创建任务','vTaskStartScheduler启动调度','任务是死循环函数','优先级高的先执行'],content:`
+<h3>创建任务</h3>
+<pre><code>xTaskCreate(led_task, "led", 128, NULL, 2, NULL);
+xTaskCreate(adc_task, "adc", 128, NULL, 3, NULL);
+vTaskStartScheduler();</code></pre>
+<p>每个任务是一个死循环函数，调度器按优先级切换。</p>
+`},
+ {id:'15-3',title:'15.3 队列/信号量/互斥锁',kp:['队列：任务间传数据','信号量：任务同步/计数','互斥锁：保护共享资源'],content:`
+<h3>任务间通信</h3>
+<ul>
+<li><b>队列Queue</b>：ADC任务把数据塞进队列，显示任务从队列取</li>
+<li><b>信号量Semaphore</b>：按键中断给信号量，任务等到信号量才执行</li>
+<li><b>互斥锁Mutex</b>：两个任务都要用串口，拿锁才能用，用完释放</li>
+</ul>
+`}
+]},
+/* ===== 第16章 工程规范 ===== */
+{id:16,ico:'📐',title:'第16章 软件工程规范',desc:'让代码可维护',lessons:[
+ {id:'16-1',title:'16.1 代码分层',kp:['硬件驱动层bsp/','功能模块层app/','主逻辑main','驱动不要掺业务逻辑'],content:`
+<h3>分层思想</h3>
+<p>把代码分三层：bsp(驱动硬件)、app(业务逻辑)、main(主流程)。改硬件只动bsp，改功能只动app，互不干扰。</p>
+`},
+ {id:'16-2',title:'16.2 状态机编程',kp:['复杂逻辑用switch-case状态机','每个状态做一件事，满足条件跳下一状态','避免多层if嵌套'],content:`
+<h3>状态机</h3>
+<p>比如自动售货机：投币→选货→出货→找零，每个状态是一个case，事件触发跳转。比一堆if-else清晰。</p>
+`}
+]},
+/* ===== 第17章 PCB ===== */
+{id:17,ico:'🖨️',title:'第17章 PCB设计',desc:'画自己的板子',lessons:[
+ {id:'17-1',title:'17.1 立创EDA入门',kp:['立创EDA免费国产PCB设计软件','流程：原理图→封装→布局→布线→打样','原理图决定电路连接，PCB决定物理布局'],content:`
+<h3>PCB设计流程</h3>
+<ol>
+<li>画原理图（元件和连接关系）</li>
+<li>给每个元件分配封装（实际尺寸）</li>
+<li>PCB布局（元件摆位置）</li>
+<li>布线（连线）</li>
+<li>DRC检查→导出Gerber→打样</li>
+</ol>
+`},
+ {id:'17-2',title:'17.2 画STM32最小系统',kp:['最小系统=芯片+电源+晶振+复位+下载口','电源去耦电容每个电源脚一个','晶振靠近芯片，走线短','SWD下载口保留'],content:`
+<h3>最小系统电路</h3>
+<p>STM32能跑起来的最少电路：芯片、3.3V电源、8MHz晶振、复位电路、SWD下载口。每个电源引脚旁放0.1uF去耦电容。</p>
+`}
+]}
+];
+
+/* ============================================================
+   题库（按章节，覆盖已学+预习内容）
+   ============================================================ */
+const QZ = [
+// 第1章
+{t:1,q:'单片机和电脑的主要区别是？',opts:['单片机更贵','单片机把CPU+内存+外设集成在一个芯片里','单片机屏幕更大','单片机不能跑程序'],a:1,e:'单片机是把CPU、RAM、Flash、外设集成在单芯片上的微型控制器，便宜省电。'},
+{t:1,q:'STM32F407VET6的Flash和RAM大小是？',opts:['512KB Flash + 192KB RAM','1MB Flash + 512KB RAM','64KB Flash + 20KB RAM','256KB Flash + 64KB RAM'],a:0,e:'F407VET6是512KB Flash、192KB RAM。'},
+{t:1,q:'板载DS1灯接在哪个引脚？',opts:['PA5','PE5','PB5','PD5'],a:1,e:'DS1=PE5，DS2=PE6，均低电平点亮。'},
+{t:1,q:'低电平点亮的LED，引脚输出什么时灯亮？',opts:['输出1(高电平)','输出0(低电平)','输出高阻','悬空'],a:1,e:'你的板载LED是低电平点亮：引脚输出0(V)灯亮，输出1(3.3V)灯灭。'},
+// 第2章
+{t:2,q:'ST-LINK下载器的作用是？',opts:['给板子供电','把程序烧进Flash并能调试','连接WiFi','显示画面'],a:1,e:'ST-LINK负责把编译好的程序下载到芯片Flash，还能在线调试。'},
+{t:2,q:'你的山寨ST-LINK下载后必须做什么才能运行新程序？',opts:['拔掉USB重插','按一下板子RESET键','重新编译','按F5'],a:1,e:'山寨ST-LINK固件缺陷，自动复位失效，必须手动按RESET。'},
+{t:2,q:'STM32下载后程序存在哪里？',opts:['RAM','Flash','硬盘','寄存器'],a:1,e:'程序下载到Flash(0x08000000)，断电不丢，上电自动运行。'},
+// 第3章
+{t:3,q:'for(int i=0;i<3;i++)循环体执行几次？',opts:['2次','3次','4次','无限次'],a:1,e:'i=0,1,2时各执行一次，共3次。'},
+{t:3,q:'把寄存器第4位置1，其他不动，写？',opts:['REG |= (1<<4)','REG &= (1<<4)','REG = 4','REG ^= (1<<4)'],a:0,e:'|= 按位或，有1得1，只把第4位置1，其他不动。'},
+{t:3,q:'把寄存器第4位清0，其他不动，正确写？',opts:['REG &= (1<<4)','REG &= ~(1<<4)','REG |= (1<<4)','REG = 0'],a:1,e:'&= ~ 是"与等取反"，第4位变0，其他位&1原样保留。少了~会清掉所有位！'},
+{t:3,q:'REG ^= (1<<5)执行一次，第5位会怎样？',opts:['变1','变0','翻转(0变1,1变0)','不变'],a:2,e:'异或翻转：跟1异或就翻面。'},
+{t:3,q:'REG ^= (1<<5)连续执行两次，第5位最终？',opts:['变1','变0','回到原状','不确定'],a:2,e:'翻转两次抵消，回到原状态。'},
+// 第4章
+{t:4,q:'点灯第一步必须做什么？',opts:['配置BSRR','开GPIO时钟(RCC)','配置ODR','开中断'],a:1,e:'外设默认关时钟省电，必须先RCC->AHB1ENR |= (1<<4)开GPIOE时钟。'},
+{t:4,q:'GPIOE的时钟使能位在AHB1ENR的第几位？',opts:['第0位','第2位','第4位','第6位'],a:2,e:'A=0,B=1,C=2,D=3,E=4。'},
+{t:4,q:'MODER寄存器中每个引脚占几位？',opts:['1位','2位','4位','8位'],a:1,e:'引脚有4种模式，需要2位表示。'},
+{t:4,q:'PE5在MODER中从第几位开始？',opts:['第5位','第10位','第15位','第20位'],a:1,e:'引脚n起始位=n×2，PE5=5×2=10。'},
+{t:4,q:'配置PE5为输出，为什么先&=~(3<<10)再|=(1<<10)？',opts:['随便写都行','|=不能把1变0，必须先清干净','减少代码行数','编译器要求'],a:1,e:'|=只能置1不能清0，如果原来两位是10，直接|1会变11(模拟)。必须先清零再设值。'},
+{t:4,q:'BSRR低16位写1让引脚？',opts:['变高电平','变低电平','高阻','翻转'],a:0,e:'BSRR低16位是置高区(Set)，写1引脚输出高电平。'},
+{t:4,q:'让PE5输出低电平(灯亮)，BSRR写？',opts:['1<<5','1<<(5+16)','1<<10','1<<21'],a:1,e:'高16位是拉低区，(5+16)=21，写1<<21让PE5变低，灯亮。'},
+{t:4,q:'同时让PE5和PE6输出高电平(都灭)，写？',opts:['1<<5','1<<6','(1<<5)|(1<<6)','(1<<5)&(1<<6)'],a:2,e:'|把两个置位命令合并。'},
+{t:4,type:'write',q:'默写：开GPIOE时钟的代码',groups:[['RCC->AHB1ENR','|=','1<<4']],e:'RCC->AHB1ENR |= (1 << 4);'},
+{t:4,type:'write',q:'默写：把PE5配成输出模式（两步）',groups:[['GPIOE->MODER','&=','~(3<<(5*2))'],['GPIOE->MODER','|=','(1<<(5*2))']],e:'先清再设：GPIOE->MODER &= ~(3<<(5*2)); GPIOE->MODER |= (1<<(5*2));'},
+{t:4,type:'write',q:'默写：点亮DS1(PE5低电平亮)',groups:[['GPIOE->BSRR','1<<(5+16)']],e:'GPIOE->BSRR = (1 << (5 + 16));'},
+// 第5章
+{t:5,q:'让DS1闪5次，for循环条件应该是？',opts:['for(i=0;i<5;i++)','for(i=1;i<5;i++)','for(i=0;i<=5;i++)','for(i=0;i<4;i++)'],a:0,e:'i<5循环5次(0,1,2,3,4)。'},
+{t:5,q:'两灯同时亮，BSRR应该写？',opts:['(1<<5)|(1<<6)','(1<<(5+16))|(1<<(6+16))','(1<<5)&(1<<6)','1<<11'],a:1,e:'两个灯都要拉低(亮)，都加16，用|合并。'},
+{t:5,q:'Delay(3000000)大约延时多久？',opts:['3秒','0.6秒','30秒','3毫秒'],a:1,e:'Delay值是空转次数，你板子5000000≈1秒，3000000≈0.6秒。'},
+// 第6章
+{t:6,q:'读取PE5引脚电平，用哪个寄存器？',opts:['GPIOE->ODR','GPIOE->IDR','GPIOE->BSRR','GPIOE->MODER'],a:1,e:'IDR=Input Data Register，只读，反映引脚当前电平。'},
+{t:6,q:'按键松开时引脚悬空会怎样？',opts:['一定是高电平','一定是低电平','电平不确定(受干扰)','自动接地'],a:2,e:'悬空引脚电平不确定，必须用上拉/下拉电阻固定。'},
+{t:6,q:'按键消抖的软件方法是？',opts:['加电容','检测到变化后延时10-20ms再确认','用中断','不管它'],a:1,e:'软件消抖：检测到按键变化后延时约20ms等机械稳定，再判断一次。'},
+// 第7章
+{t:7,q:'中断相比轮询的优势是？',opts:['更省CPU，事件触发才处理','代码更简单','不需要配置','速度更慢'],a:0,e:'轮询要一直查，中断是事件来了才通知，省CPU。'},
+{t:7,q:'外部中断服务函数里必须做什么？',opts:['延时','清中断挂起位(PR)','重新初始化','打印日志'],a:1,e:'不清PR会一直重复进中断，必须EXTI->PR |= (1<<n)。'},
+// 第8章
+{t:8,q:'串口通信TX和RX怎么接线？',opts:['TX接TX，RX接RX','TX接RX，RX接TX(交叉)','只接TX','只接GND'],a:1,e:'交叉接线：本端TX接对方RX，本端RX接对方TX。'},
+{t:8,q:'printf重定向到串口需要重写哪个函数？',opts:['main','fputc','printf','scanf'],a:1,e:'重写fputc把字符发到USART->DR，printf就能用了。'},
+// 第9章
+{t:9,q:'I2C总线有几根线？',opts:['1根','2根(SCL+SDA)','4根','8根'],a:1,e:'I2C=SCL(时钟)+SDA(数据)，共2根线。'},
+// 第10章
+{t:10,q:'SPI比I2C的主要优势是？',opts:['线更少','速度更快','支持更多设备','更便宜'],a:1,e:'SPI全双工，速度比I2C快很多，适合高速设备。'},
+// 第11章
+{t:11,q:'SysTick定时器属于？',opts:['外设定时器','Cortex-M内核自带','外部芯片','软件模拟'],a:1,e:'SysTick是Cortex-M内核自带的24位倒计时器。'},
+{t:11,q:'定时器定时时间公式？',opts:['(PSC+1)*(ARR+1)/时钟频率','PSC*ARR/时钟','(PSC-1)*(ARR-1)','PSC+ARR'],a:0,e:'定时时间=(PSC+1)×(ARR+1)÷定时器时钟。'},
+// 第12章
+{t:12,q:'PWM控制LED亮度靠什么？',opts:['电压大小','占空比','频率','电流'],a:1,e:'占空比决定平均电压，人眼看到的就是亮度变化。'},
+// 第13章
+{t:13,q:'F407的12位ADC，3.3V对应数字值？',opts:['1023','2047','4095','65535'],a:2,e:'12位=2^12=4096，0~4095对应0~3.3V。'},
+// 第15章
+{t:15,q:'FreeRTOS中任务间传递数据用？',opts:['全局变量','队列Queue','直接调用函数','共享指针'],a:1,e:'队列是任务间安全传递数据的标准方式。'},
+];
+
+/* ============================================================
+   状态管理
+   ============================================================ */
+const LS={get:(k,d)=>{try{return JSON.parse(localStorage.getItem(k))??d}catch(e){return d}},set:(k,v)=>localStorage.setItem(k,JSON.stringify(v))};
+let st={done:LS.get('m_done',{}),fav:LS.get('m_fav',[]),qz:LS.get('m_qz',{wrong:{},seen:{},right:0,total:0,due:{}}),curChap:null,curLesson:null};
+let quizState=null;
+
+/* 渲染首页章节列表 */
+function renderChapters(){
+  const box=document.getElementById('chapList');box.innerHTML='';
+  let doneCount=0,totalLessons=0;
+  CHAPTERS.forEach((ch,ci)=>{
+    totalLessons+=ch.lessons.length;
+    const chDone=ch.lessons.filter(l=>st.done[l.id]).length;
+    const chTotal=ch.lessons.length;
+    if(chDone===chTotal)doneCount+=chDone;
+    const pct=chTotal?Math.round(chDone/chTotal*100):0;
+    const unlocked=ci===0||CHAPTERS[ci-1].lessons.every(l=>st.done[l.id]);
+    const div=document.createElement('div');
+    div.className='chapter-item'+(unlocked?'':' locked');
+    div.innerHTML=`<div class="ico" style="background:hsl(${ci*22},70%,92%)">${unlocked?ch.ico:'🔒'}</div>
+      <div class="info"><div class="ttl">${ch.title}</div><div class="desc">${ch.desc}</div><div class="pbar" style="width:60%"><span style="width:${pct}%"></span></div></div>
+      <div class="prog">${chDone}/${chTotal}</div>`;
+    if(unlocked)div.onclick=()=>openChapter(ci);
+    box.appendChild(div);
+  });
+  const doneLs=Object.keys(st.done).length;
+  document.getElementById('stCh').textContent=CHAPTERS.filter(c=>c.lessons.every(l=>st.done[l.id])).length+'/'+CHAPTERS.length;
+  document.getElementById('stDone').textContent=doneLs;
+  updateStats();
+  // 继续学习卡片
+  const next=findNextLesson();
+  document.getElementById('contText').textContent=next?`${next.ch}. ${next.l.title}`:'恭喜！全部学完 🎉';
+  const pct2=totalLessons?Math.round(doneLs/totalLessons*100):0;
+  document.getElementById('contProg').style.width=pct2+'%';
+}
+
+function findNextLesson(){
+  for(const ch of CHAPTERS){
+    for(const l of ch.lessons){
+      if(!st.done[l.id])return{ch:ch.title,l};
+    }
+  }
+  return null;
+}
+
+function continueLearn(){
+  const n=findNextLesson();
+  if(n){
+    const ci=CHAPTERS.findIndex(c=>c.title===n.ch);
+    openLesson(ci,CHAPTERS[ci].lessons.findIndex(l=>l.id===n.l.id));
+  }
+}
+
+/* 打开章节课程列表 */
+function openChapter(ci){
+  st.curChap=ci;
+  const ch=CHAPTERS[ci];
+  document.getElementById('chTitle').textContent=ch.title;
+  const box=document.getElementById('lessonList');box.innerHTML='';
+  ch.lessons.forEach((l,li)=>{
+    const div=document.createElement('div');
+    div.className='lesson-item'+(st.done[l.id]?' done':'');
+    div.innerHTML=`<div class="dot"></div><div class="lt">${l.title}</div><div class="ln">${st.done[l.id]?'✓ 已学':'未学'}</div>`;
+    div.onclick=()=>openLesson(ci,li);
+    box.appendChild(div);
+  });
+  showPage('page-chapter');
+}
+
+/* 打开课程详情 */
+function openLesson(ci,li){
+  const ch=CHAPTERS[ci];const l=ch.lessons[li];
+  st.curChap=ci;st.curLesson=li;
+  document.getElementById('lsTitle').textContent=l.title;
+  document.getElementById('favBtn').textContent=st.fav.includes(l.id)?'★':'☆';
+  let html=`<div class="meta">${ch.title} · 第${li+1}课</div>${l.content}`;
+  if(l.kp&&l.kp.length){
+    html+='<h3>本课关键点</h3><div class="kp"><ul>';
+    l.kp.forEach(k=>html+=`<li>${k}</li>`);
+    html+='</ul></div>';
+  }
+  // 本课习题
+  const qs=QZ.filter(q=>q.t===l.id.split('-')[0]*1);
+  if(qs.length){
+    html+=`<div class="lesson-quiz"><h3>本节练习（${qs.length}题）</h3><p>学完做几道检验一下 👇</p>
+      <button class="btn block" onclick="startChapterQuiz(${l.id.split('-')[0]})">开始练习</button></div>`;
+  }
+  html+=`<button class="btn ghost block" onclick="markDone('${l.id}')">${st.done[l.id]?'✓ 已标记完成（点击取消）':'标记本课已学 ✓'}</button>`;
+  document.getElementById('lessonContent').innerHTML=html;
+  showPage('page-lesson');
+}
+
+function markDone(id){
+  if(st.done[id])delete st.done[id];else st.done[id]=1;
+  LS.set('m_done',st.done);
+  renderChapters();
+  openLesson(st.curChap,st.curLesson);
+}
+
+function toggleFav(){
+  const l=CHAPTERS[st.curChap].lessons[st.curLesson];
+  const i=st.fav.indexOf(l.id);
+  if(i>=0)st.fav.splice(i,1);else st.fav.push(l.id);
+  LS.set('m_fav',st.fav);
+  document.getElementById('favBtn').textContent=st.fav.includes(l.id)?'★':'☆';
+  updateMe();
+}
+
+/* ============================================================
+   习题系统
+   ============================================================ */
+function renderPracChapters(){
+  const box=document.getElementById('pracChapList');box.innerHTML='';
+  CHAPTERS.forEach(ch=>{
+    const cnt=QZ.filter(q=>q.t===ch.id).length;
+    if(!cnt)return;
+    const div=document.createElement('div');
+    div.className='chapter-item';
+    div.innerHTML=`<div class="ico" style="background:#eef2ff">${ch.ico}</div>
+      <div class="info"><div class="ttl">${ch.title}</div><div class="desc">共${cnt}题</div></div>
+      <div class="prog">›</div>`;
+    div.onclick=()=>startChapterQuiz(ch.id);
+    box.appendChild(div);
+  });
+}
+
+function startPractice(mode){
+  let pool=[];
+  if(mode==='order')pool=QZ.map((q,i)=>i);
+  else if(mode==='random'){const a=QZ.map((q,i)=>i);for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}pool=a;}
+  else if(mode==='wrong')pool=Object.keys(st.qz.wrong).filter(i=>st.qz.wrong[i]>0).map(Number);
+  else if(mode==='review'){const today=fmtDate(new Date());pool=Object.keys(st.qz.due).filter(i=>st.qz.due[i]<=today).map(Number);}
+  else if(mode==='exam'){const a=QZ.map((q,i)=>i);pool=a.sort(()=>Math.random()-.5).slice(0,Math.min(20,a.length));}
+  else if(mode==='daily'){const today=fmtDate(new Date());const wrong=Object.keys(st.qz.wrong).map(Number).sort((a,b)=>st.qz.wrong[b]-st.qz.wrong[a]);const due=Object.keys(st.qz.due).filter(i=>st.qz.due[i]<=today).map(Number);const seen=new Set([...wrong,...due]);const fresh=QZ.map((q,i)=>i).filter(i=>!st.qz.seen[i]);pool=[...due,...wrong,...fresh].filter((v,k,a)=>a.indexOf(v)===k).slice(0,10);}
+  if(!pool.length){alert(mode==='wrong'?'还没有错题，多做几道就有了':mode==='review'?'暂无到期复习题':'题库为空');return;}
+  quizState={pool,idx:0,mode,correct:0};
+  document.getElementById('quizTitle').textContent={order:'顺序练习',random:'随机刷题',wrong:'错题本',review:'艾宾浩斯复习',exam:'模拟考试(20题)',daily:'每日10题'}[mode];
+  showQuiz();
+  showPage('page-quiz');
+}
+
+function startChapterQuiz(chId){
+  const pool=QZ.map((q,i)=>q.t===chId?i:-1).filter(i=>i>=0);
+  if(!pool.length){alert('本章暂无习题');return;}
+  quizState={pool,idx:0,mode:'chapter',correct:0};
+  document.getElementById('quizTitle').textContent=CHAPTERS.find(c=>c.id===chId).title+' · 练习';
+  showQuiz();
+  showPage('page-quiz');
+}
+
+function showQuiz(){
+  const i=quizState.pool[quizState.idx];
+  const q=QZ[i];
+  document.getElementById('quizProg').textContent=`${quizState.idx+1}/${quizState.pool.length}`;
+  const area=document.getElementById('quizArea');
+  let html=`<div class="quiz-card"><span class="qtag">${CHAPTERS.find(c=>c.id===q.t)?.title||''} ${q.type==='write'?'·默写':q.type==='fill'?'·填空':''}</span>
+    <div class="qtxt">${quizState.idx+1}. ${q.q}</div>`;
+  if(q.type==='write'){
+    html+=`<textarea class="fill-input" id="fillAns" rows="3" placeholder="在此输入代码..."></textarea>`;
+  }else if(q.type==='fill'){
+    html+=`<input class="fill-input" id="fillAns" placeholder="输入答案...">`;
+  }else{
+    q.opts.forEach((o,k)=>{
+      html+=`<div class="opt" data-k="${k}" onclick="pickOpt(${k})"><span class="key">${String.fromCharCode(65+k)}</span>${o}</div>`;
+    });
+  }
+  html+=`<div class="quiz-result" id="qRes"></div><div class="explain" id="qExp"><b>解析：</b>${q.e||''}</div></div>`;
+  area.innerHTML=html;
+  document.getElementById('quizNext').textContent=quizState.idx===quizState.pool.length-1?'查看结果':'下一题';
+  quizState.curAns=null;quizState.submitted=false;
+}
+
+let pickedOpt=null;
+function pickOpt(k){
+  if(quizState.submitted)return;
+  pickedOpt=k;
+  document.querySelectorAll('.opt').forEach(o=>o.classList.remove('sel'));
+  document.querySelector(`.opt[data-k="${k}"]`).classList.add('sel');
+  submitQuiz(k);
+}
+
+function submitQuiz(ans){
+  if(quizState.submitted)return;
+  quizState.submitted=true;
+  const i=quizState.pool[quizState.idx];
+  const q=QZ[i];
+  const correct=ans===q.a;
+  const res=document.getElementById('qRes');
+  res.classList.add('show');
+  res.innerHTML=correct?'✅ 回答正确！':'❌ 回答错误';
+  res.className='quiz-result show '+(correct?'ok':'no');
+  document.getElementById('qExp').classList.add('show');
+  if(!q.type||q.type==='tf'){
+    document.querySelectorAll('.opt').forEach(o=>{
+      const k=+o.dataset.k;
+      if(k===q.a)o.classList.add('correct');
+      else if(k===ans)o.classList.add('wrong');
+    });
+  }
+  // 记录
+  st.qz.seen[i]=1;st.qz.total++;
+  if(correct){st.qz.right++;if(st.qz.wrong[i])delete st.qz.wrong[i];updateDue(i,true);}
+  else{st.qz.wrong[i]=(st.qz.wrong[i]||0)+1;updateDue(i,false);}
+  if(correct)quizState.correct++;
+  LS.set('m_qz',st.qz);
+  updateStats();
+}
+
+function checkFill(){
+  if(quizState.submitted)return;
+  const v=document.getElementById('fillAns').value.trim();
+  if(!v){alert('请输入答案');return;}
+  const i=quizState.pool[quizState.idx];
+  const q=QZ[i];
+  let correct=false;
+  if(q.type==='write'){
+    correct=q.groups.every(g=>g.some(s=>v.toLowerCase().replace(/\s+/g,'').includes(s.toLowerCase().replace(/\s+/g,''))));
+  }else{
+    correct=q.opts.some(o=>v===o);
+  }
+  submitQuiz(correct?0:1);
+  if(!correct){
+    const res=document.getElementById('qRes');
+    res.innerHTML='❌ 答案不对';
+    res.className='quiz-result show no';
+    document.getElementById('qExp').innerHTML+='<br><b>参考答案：</b>'+(q.type==='write'?q.e:q.opts[q.a]);
+    document.getElementById('qExp').classList.add('show');
+  }
+}
+
+function quizNext(){
+  if(!quizState.submitted){
+    const q=QZ[quizState.pool[quizState.idx]];
+    if(q.type==='write'||q.type==='fill'){checkFill();return;}
+    alert('请选择答案');return;
+  }
+  if(quizState.idx<quizState.pool.length-1){
+    quizState.idx++;showQuiz();
+  }else{
+    // 结束
+    const rate=Math.round(quizState.correct/quizState.pool.length*100);
+    document.getElementById('quizArea').innerHTML=`<div class="quiz-card" style="text-align:center">
+      <h2>${rate>=80?'🎉 表现优秀！':'💪 继续加油！'}</h2>
+      <p style="font-size:32px;margin:10px 0">${quizState.correct}/${quizState.pool.length}</p>
+      <p>正确率：<b>${rate}%</b></p>
+      <button class="btn block" onclick="showPage('page-prac');renderPracChapters();updateStats()">返回练习</button>
+      </div>`;
+    document.getElementById('quizNext').style.display='none';
+  }
+}
+
+function exitQuiz(){
+  document.getElementById('quizNext').style.display='';
+  showPage('page-prac');
+}
+
+function updateDue(i,right){
+  const d=st.qz.due[i]||{s:0,n:''};
+  const gaps=[1,2,4,7];
+  if(right){
+    if(d.s<gaps.length){d.s++;const dt=new Date();dt.setDate(dt.getDate()+gaps[d.s-1]);d.n=fmtDate(dt);}
+    else delete st.qz.due[i];
+  }else{
+    d.s=0;const dt=new Date();dt.setDate(dt.getDate()+1);d.n=fmtDate(dt);
+  }
+  if(d.s)st.qz.due[i]=d;else delete st.qz.due[i];
+}
+
+function fmtDate(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+
+function updateStats(){
+  const total=st.qz.total||0,right=st.qz.right||0;
+  const wrong=Object.keys(st.qz.wrong).length;
+  document.getElementById('stQ').textContent=total;
+  document.getElementById('stRate').textContent=total?Math.round(right/total*100)+'%':'0%';
+  document.getElementById('pTotal').textContent=total;
+  document.getElementById('pRight').textContent=right;
+  document.getElementById('pWrong').textContent=wrong;
+  document.getElementById('pRate').textContent=total?Math.round(right/total*100)+'%':'0%';
+  const wb=document.getElementById('wrongBadge');
+  if(wrong){wb.textContent=wrong;wb.style.display='inline';}else wb.style.display='none';
+  const due=Object.keys(st.qz.due).filter(i=>st.qz.due[i]<=fmtDate(new Date())).length;
+  const db=document.getElementById('dueBadge');
+  if(due){db.textContent=due;db.style.display='inline';}else db.style.display='none';
+  // 我的页
+  const totalLs=CHAPTERS.reduce((s,c)=>s+c.lessons.length,0);
+  const doneLs=Object.keys(st.done).length;
+  document.getElementById('mCh').textContent=Math.round(doneLs/totalLs*100)+'%';
+  document.getElementById('mDay').textContent='0';
+  document.getElementById('mFav').textContent=st.fav.length;
+}
+
+function updateMe(){updateStats();}
+
+function exportWrong(){
+  const wrongs=Object.keys(st.qz.wrong).map(Number).sort((a,b)=>st.qz.wrong[b]-st.qz.wrong[a]);
+  if(!wrongs.length){alert('还没有错题');return;}
+  let txt='STM32错题本\n生成时间：'+new Date().toLocaleString()+'\n\n';
+  wrongs.forEach(i=>{
+    const q=QZ[i];
+    txt+=`【错${st.qz.wrong[i]}次】${q.q}\n`;
+    if(q.opts)q.opts.forEach((o,k)=>txt+=`  ${String.fromCharCode(65+k)}. ${o}\n`);
+    txt+=`  正确答案：${String.fromCharCode(65+q.a)}\n  解析：${q.e||''}\n\n`;
+  });
+  const blob=new Blob([txt],{type:'text/plain;charset=utf-8'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);a.download='STM32错题本.txt';a.click();
+}
+
+function resetQuiz(){if(confirm('确定清空做题记录？')){st.qz={wrong:{},seen:{},right:0,total:0,due:{}};LS.set('m_qz',st.qz);updateStats();alert('已重置');}}
+
+/* 页面切换 */
+function showPage(id){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.page===id));
+  window.scrollTo(0,0);
+  if(id==='page-prac'){renderPracChapters();updateStats();}
+  if(id==='page-me')updateStats();
+}
+
+function goHome(){showPage('page-home');renderChapters();}
+function backFromLesson(){showPage('page-chapter');}
+
+/* init */
+renderChapters();
+updateStats();
+</script>
+</body>
+</html>
