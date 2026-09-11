@@ -75,6 +75,8 @@ pre .copy-btn{margin-bottom:6px}
 .kp b{color:#92400e}
 .tip{background:#dbeafe;border-left:4px solid var(--pri);padding:10px 12px;border-radius:6px;margin:12px 0;font-size:14px;color:#1e40af}
 .warn-box{background:#fee2e2;border-left:4px solid var(--err);padding:10px 12px;border-radius:6px;margin:12px 0;font-size:14px;color:#991b1b}
+.bug-box{background:#fffbeb;border-left:4px solid #f59e0b;padding:10px 12px;border-radius:6px;margin:12px 0;font-size:13.5px;color:#78350f}
+.bug-box p{margin:4px 0}
 table{width:100%;border-collapse:collapse;margin:10px 0;font-size:13px}
 table th,table td{border:1px solid var(--line);padding:6px 8px;text-align:left}
 table th{background:#f1f5f9}
@@ -2597,6 +2599,348 @@ NC    ────→ 常闭触点（通电断开）
 控制交流电器：火线接COM，电器一端接NO，另一端接零线</pre>
 <div class="warn-box">⚠️ <b>接220V交流电注意安全！</b>手别碰，断电接线，最好用带外壳的继电器模块。</div>
 `}
+]},
+/* ===== 第30章 踩坑排错知识库 ===== */
+{id:30,ico:'🆘',title:'第30章 踩坑排错知识库',desc:'现象→原因→排查步骤速查表',lessons:[
+ {id:'30-1',title:'30.1 Keil与J-Link安装报错',kp:['芯片包没装=找不到Device','J-Link驱动冲突要卸载重装','Keil路径别有中文','下载器山寨版要装特定驱动'],content:`
+<h3>报错1：找不到芯片型号</h3>
+<div class="bug-box">
+<p><b>📋 现象：</b>Keil里选Device时找不到STM32F407VET6，或者编译报错 "cannot open source file 'stm32f4xx.h'"</p>
+<p><b>🔍 可能原因：</b>没装芯片支持包（DFP）。Keil本身不带STM32的库，要单独装。</p>
+<p><b>✅ 排查步骤：</b></p>
+<ol>
+<li>打开 Keil → <code>Pack Installer</code>（工具栏那个绿色芯片图标）</li>
+<li>左边找到 <b>STMicroelectronics</b> → <b>STM32F4 Series</b></li>
+<li>右边点 <b>Install</b> 安装 <code>STM32F4xx_DFP</code></li>
+<li>装完重启Keil，再选Device就能看到F407了</li>
+</ol>
+</div>
+
+<h3>报错2：J-Link驱动装不上 / 识别不了</h3>
+<div class="bug-box">
+<p><b>📋 现象：</b>插上J-Link，设备管理器里有黄色感叹号，或者Keil提示 "No J-Link found"</p>
+<p><b>🔍 可能原因：</b>驱动没装对、和ST-Link驱动冲突、J-Link固件太旧。</p>
+<p><b>✅ 排查步骤：</b></p>
+<ol>
+<li>去SEGGER官网下载最新 <b>J-Link Software</b>，安装时勾 "USB driver"</li>
+<li>如果之前装过ST-Link驱动，可能冲突：<b>卸载所有J-Link相关驱动→重启→重装</b></li>
+<li>设备管理器里看J-Link是否正常（无黄色感叹号）</li>
+<li>打开 <b>J-Link Commander</b>，能识别到J-Link型号和序列号就说明驱动OK</li>
+</ol>
+</div>
+
+<h3>报错3：Keil安装路径有中文</h3>
+<div class="bug-box">
+<p><b>📋 现象：</b>编译时报各种莫名其妙的错误，比如 "Error: #5" 或者找不到文件</p>
+<p><b>🔍 可能原因：</b>Keil安装路径或工程路径含中文（如 <code>D:\单片机\工程\</code>），Keil对中文路径支持极差。</p>
+<p><b>✅ 排查步骤：</b></p>
+<ol>
+<li>Keil装在全英文路径，如 <code>C:\Keil_v5</code></li>
+<li>工程文件夹也全英文，如 <code>D:\STM32\MyProject</code></li>
+<li>文件名也别用中文（启动文件、源文件）</li>
+</ol>
+</div>
+
+<h3>报错4：山寨ST-Link驱动问题</h3>
+<div class="bug-box">
+<p><b>📋 现象：</b>淘宝10元的ST-Link插上没反应，或Keil下载提示 "No ST-Link found"</p>
+<p><b>🔍 可能原因：</b>山寨ST-Link用的是STM32F103模拟的，需要特定驱动。</p>
+<p><b>✅ 排查步骤：</b></p>
+<ol>
+<li>不要装ST官方的最新驱动，装商家给的驱动包（通常是旧版ST-Link Utility带的驱动）</li>
+<li>或者用 <b>Zadig</b> 工具把驱动换成 WinUSB</li>
+<li>设备管理器里应该显示 "STMicroelectronics STLink dongle"</li>
+</ol>
+</div>
+`},
+ {id:'30-2',title:'30.2 CubeMX生成代码常见坑',kp:['时钟配置错=串口乱码+程序跑飞','生成代码会覆盖用户写的内容','外设初始化顺序可能不对','Pinout复用冲突要检查'],content:`
+<h3>坑1：时钟配置错误</h3>
+<div class="bug-box">
+<p><b>📋 现象：</b>CubeMX生成的代码下载后串口乱码、延时不准、或者程序直接不跑</p>
+<p><b>🔍 可能原因：</b>CubeMX里时钟树配错了，HSE频率和实际晶振不符。</p>
+<p><b>✅ 排查步骤：</b></p>
+<ol>
+<li>确认板子晶振是多少：F407常见8MHz或25MHz，看板子丝印或原理图</li>
+<li>CubeMX → <b>RCC</b> → High Speed Clock 选 "Crystal/Ceramic Resonator"</li>
+<li><b>Clock Configuration</b> 页面里，<code>HSE</code> 输入实际晶振值（如8）</li>
+<li>配置PLL：M=8, N=336, P=2 → SYSCLK=168MHz</li>
+<li>关键：<b>点 "Resolve Clock Issues" 或手动检查有没有红色警告</b></li>
+</ol>
+</div>
+
+<h3>坑2：用户代码被覆盖</h3>
+<div class="bug-box">
+<p><b>📋 现象：</b>在main.c里写了代码，重新用CubeMX生成后全没了</p>
+<p><b>🔍 可能原因：</b>代码写在了 <code>BEGIN/END</code> 注释块外面。</p>
+<p><b>✅ 解决方法：</b></p>
+<ol>
+<li>只在 <code>/* USER CODE BEGIN xxx */</code> 和 <code>/* USER CODE END xxx */</code> 之间写代码</li>
+<li>这之间的内容CubeMX不会覆盖</li>
+<li>修改外设配置后重新生成，用户代码保留</li>
+</ol>
+</div>
+
+<h3>坑3：外设初始化顺序</h3>
+<div class="bug-box">
+<p><b>📋 现象：</b>GPIO/串口等外设不工作，但配置看着没问题</p>
+<p><b>🔍 可能原因：</b>初始化顺序不对，比如MX_GPIO_Init在MX_USART_UART_Init之前，但串口用的GPIO还没配。</p>
+<p><b>✅ 排查步骤：</b></p>
+<ol>
+<li>看main函数里 <code>MX_XXX_Init()</code> 的顺序</li>
+<li>CubeMX → <b>Project Manager</b> → <b>Advanced Settings</b> 可以调整初始化顺序</li>
+<li>一般：先时钟 → 再GPIO → 再外设（USART/SPI/I2C）</li>
+</ol>
+</div>
+
+<h3>坑4：引脚复用冲突</h3>
+<div class="bug-box">
+<p><b>📋 现象：</b>某个外设配好了不工作，CubeMX也没报错</p>
+<p><b>🔍 可能原因：</b>两个外设用了同一个引脚，或者引脚和板载硬件冲突（比如PE5接了LED）。</p>
+<p><b>✅ 排查步骤：</b></p>
+<ol>
+<li>CubeMX的Pinout页面，引脚标红就是冲突</li>
+<li>检查有没有和板载LED/按键/晶振引脚重复</li>
+<li>F407的PA13/PA14是SWD调试口，<b>别当普通GPIO用！</b>用了就下载不了了</li>
+</ol>
+</div>
+`},
+ {id:'30-3',title:'30.3 下载失败与连接问题',kp:['找不到芯片=接线/驱动/boot模式','擦除失败=芯片写保护或Flash满','下载后不运行=没按复位','芯片锁死=用ST-Link Utility解锁'],content:`
+<h3>问题1：No target connected / 找不到芯片</h3>
+<div class="bug-box">
+<p><b>📋 现象：</b>点下载提示 "No target connected" 或 "Cannot access Memory"</p>
+<p><b>🔍 可能原因：</b>接线错、驱动没装、芯片进了低功耗、Boot模式不对。</p>
+<p><b>✅ 排查步骤：</b></p>
+<ol>
+<li>检查接线：SWDIO↔SWDIO，SWCLK↔SWCLK，GND↔GND（必须共地！）</li>
+<li>板子有没有供电？ST-Link的3.3V脚可以给小板供电，但大板子要独立供电</li>
+<li>Keil → Options → Debug → Settings，看能不能识别到芯片ID（0x2E000680是F407）</li>
+<li>如果识别不了，按住板子RESET键再点下载，在连接瞬间松开</li>
+<li>检查Boot0/Boot1引脚：正常运行都要接GND（00=从Flash启动）</li>
+</ol>
+</div>
+
+<h3>问题2：擦除失败 / 编程失败</h3>
+<div class="bug-box">
+<p><b>📋 现象：</b>下载时报 "Erase Failed" 或 "Programming Failed"</p>
+<p><b>🔍 可能原因：</b>芯片被写保护、Flash满了、下载算法不对。</p>
+<p><b>✅ 排查步骤：</b></p>
+<ol>
+<li>Keil → Options → Debug → Settings → Flash Download，确认选了 <b>STM32F4xx Flash</b> 算法</li>
+<li>如果选了 "Erase Full Chip" 太慢，可以选 "Erase Sectors"</li>
+<li>如果提示写保护：用 <b>ST-Link Utility</b> → Target → Un Chip 解锁</li>
+<li>检查程序大小有没有超Flash（F407VET6是512KB）</li>
+</ol>
+</div>
+
+<h3>问题3：下载成功但程序不运行</h3>
+<div class="bug-box">
+<p><b>📋 现象：</b>提示下载成功，但灯不亮/串口没输出</p>
+<p><b>🔍 可能原因：</b>没复位、程序停在main之前、时钟配错。</p>
+<p><b>✅ 排查步骤：</b></p>
+<ol>
+<li>按一下板子上的 <b>RESET</b> 键（山寨ST-Link不支持自动复位）</li>
+<li>Keil → Options → Debug → Settings → 勾选 "Reset and Run"（自动复位运行）</li>
+<li>如果还是不跑，用调试模式看程序停在哪行</li>
+<li>检查 <code>SystemInit()</code> 时钟配置是否正确</li>
+</ol>
+</div>
+
+<h3>问题4：芯片锁死（连不上了）</h3>
+<div class="bug-box">
+<p><b>📋 现象：</b>之前能下载，突然连不上了，"No target connected"</p>
+<p><b>🔍 可能原因：</b>代码里把SWD引脚（PA13/PA14）配成了GPIO，导致下载口被占用。</p>
+<p><b>✅ 拯救方法：</b></p>
+<ol>
+<li>打开 <b>ST-Link Utility</b></li>
+<li>Target → Settings → 把 "Mode" 改成 <b>Connect under Reset</b></li>
+<li>按住板子RESET键，点 Connect，连接成功后松开</li>
+<li>立刻点 "Full chip erase" 擦除Flash，解锁芯片</li>
+</ol>
+<div class="warn-box">⚠️ <b>新手千万别碰PA13/PA14！</b>这两个是调试下载口，配成GPIO就锁死，只能按上面方法救。</div>
+</div>
+`},
+ {id:'30-4',title:'30.4 串口与通信故障',kp:['乱码=波特率或时钟不对','没输出=接线/重定向/时钟','I2C没应答=上拉/地址','SPI数据错=CPOL/CPHA'],content:`
+<h3>问题1：串口乱码</h3>
+<div class="bug-box">
+<p><b>📋 现象：</b>串口助手收到一堆乱码（$#@!之类的）</p>
+<p><b>🔍 可能原因：</b>波特率不匹配、时钟配置错、接线接触不良。</p>
+<p><b>✅ 排查步骤：</b></p>
+<ol>
+<li>检查串口助手波特率和代码里是否一致（都设115200）</li>
+<li>检查数据位8、停止位1、无校验（8N1）</li>
+<li>如果波特率对还乱码，<b>大概率是时钟配错了</b>：检查 <code>SystemCoreClock</code> 是否168MHz</li>
+<li>用LED闪烁测试：如果延时明显不对（比如1秒闪成3秒），就是时钟错</li>
+<li>确认TX/RX交叉接，且共地</li>
+</ol>
+</div>
+
+<h3>问题2：串口完全没输出</h3>
+<div class="bug-box">
+<p><b>📋 现象：</b>串口助手什么都收不到</p>
+<p><b>🔍 可能原因：</b>printf没重定向、串口没初始化、接线错、时钟没开。</p>
+<p><b>✅ 排查步骤：</b></p>
+<ol>
+<li>检查有没有重定向fputc：
+<pre><code>int fputc(int ch, FILE *f)
+{
+    HAL_UART_Transmit(&huart1, (uint8_t*)&ch, 1, 100);
+    return ch;
+}</code></pre>
+</li>
+<li>检查串口初始化调用了 <code>MX_USART1_UART_Init()</code></li>
+<li>检查 <code>__HAL_RCC_USART1_CLK_ENABLE()</code> 和 <code>__HAL_RCC_GPIOA_CLK_ENABLE()</code> 都有</li>
+<li>接线：USB转TTL的TXD接MCU的PA10(RX)，RXD接PA9(TX)</li>
+<li>用示波器/逻辑分析仪看TX脚有没有波形</li>
+</ol>
+</div>
+
+<h3>问题3：I2C没有应答（HAL_TIMEOUT）</h3>
+<div class="bug-box">
+<p><b>📋 现象：</b>调用HAL_I2C_Master_Transmit返回HAL_TIMEOUT</p>
+<p><b>🔍 可能原因：</b>地址错、没上拉、接线反、设备没供电。</p>
+<p><b>✅ 排查步骤：</b></p>
+<ol>
+<li>确认设备地址：I2C地址有7位和8位之分，HAL库用8位（左移一位），如0x78（7位0x3C<<1）</li>
+<li>SDA/SCL必须有4.7k上拉电阻到3.3V（模块一般自带）</li>
+<li>SDA接SDA，SCL接SCL（I2C不用交叉！）</li>
+<li>设备VCC和GND接对了，3.3V还是5V看手册</li>
+<li>用逻辑分析仪抓SDA/SCL波形，看有没有ACK</li>
+</ol>
+</div>
+
+<h3>问题4：SPI数据不对</h3>
+<div class="bug-box">
+<p><b>📋 现象：</b>SPI通信能通但数据全错</p>
+<p><b>🔍 可能原因：</b>CPOL/CPHA模式不对、字节序、片选没拉低。</p>
+<p><b>✅ 排查步骤：</b></p>
+<ol>
+<li>确认SPI模式（0~3），即CPOL和CPHA的组合，必须和从设备一致</li>
+<li>确认数据位宽（8位还是16位）</li>
+<li>确认MSB先发还是LSB先发（绝大多数MSB）</li>
+<li>片选CS：通信前拉低，通信后拉高</li>
+<li>用逻辑分析仪抓波形对比时序图</li>
+</ol>
+</div>
+`},
+ {id:'30-5',title:'30.5 死机与异常中断',kp:['HardFault=栈溢出/越界/野指针','中断不进=没开NVIC/优先级','DMA不工作=时钟/配置/中断','看门狗复位=没喂狗'],content:`
+<h3>问题1：HardFault死机</h3>
+<div class="bug-box">
+<p><b>📋 现象：</b>程序突然卡死，灯不闪了，串口没输出</p>
+<p><b>🔍 可能原因：</b>数组越界、野指针、栈溢出、除零、访问未映射内存。</p>
+<p><b>✅ 排查步骤：</b></p>
+<ol>
+<li>在 <code>HardFault_Handler</code> 里加printf打印寄存器（第27章教过）</li>
+<li>调试模式下程序会停在HardFault_Handler，看<b>调用栈(Call Stack)</b>回溯到出错的函数</li>
+<li>检查所有数组下标有没有越界（尤其循环里）</li>
+<li>检查指针是否初始化、是否为NULL</li>
+<li>检查局部变量大小：<code>uint8_t buf[1024]</code>放在函数里会撑爆栈！改全局变量</li>
+<li>除零：检查除数有没有可能为0</li>
+</ol>
+<div class="tip">💡 <b>90%的HardFault是栈溢出：</b>启动文件里 <code>Stack_Size</code> 默认0x400(1KB)，函数里开大数组就炸。改大到0x1000(4KB)试试。</div>
+</div>
+
+<h3>问题2：中断不进</h3>
+<div class="bug-box">
+<p><b>📋 现象：</b>配置了外部中断/定时器中断，但中断服务函数不执行</p>
+<p><b>🔍 可能原因：</b>NVIC没开、优先级配置错、中断标志没清。</p>
+<p><b>✅ 排查步骤：</b></p>
+<ol>
+<li>检查有没有调用 <code>HAL_NVIC_SetPriority()</code> 和 <code>HAL_NVIC_EnableIRQ()</code></li>
+<li>检查中断线有没有配对：比如EXTI0对应GPIO_PIN_0，不管哪个Port</li>
+<li>检查中断服务函数名对不对：<code>EXTI0_IRQHandler</code>、<code>TIM2_IRQHandler</code>（拼错就不进）</li>
+<li>检查中断标志有没有清除：HAL库一般自动清，但标准库要手动清 <code>EXTI->PR = ...</code></li>
+<li>用调试模式在中断函数里设断点，看进不进</li>
+</ol>
+</div>
+
+<h3>问题3：DMA不工作</h3>
+<div class="bug-box">
+<p><b>📋 现象：</b>配置了DMA传输但数据没发/没收到</p>
+<p><b>🔍 可能原因：</b>DMA时钟没开、通道选错、配置方向错、缓存问题。</p>
+<p><b>✅ 排查步骤：</b></p>
+<ol>
+<li>检查 <code>__HAL_RCC_DMA1_CLK_ENABLE()</code> 或DMA2时钟开了没</li>
+<li>检查DMA通道和请求配对：F407的USART2_TX用DMA1_Stream6，USART2_RX用DMA1_Stream5</li>
+<li>检查传输方向：外设到内存还是内存到外设</li>
+<li>检查数据缓冲区是否在DMA能访问的区域（SRAM，不是CCM）</li>
+<li>F407有缓存问题：DMA缓冲区前加 <code>__attribute__((section(".RAM_D1")))</code> 或关闭DCache</li>
+<li>调用 <code>HAL_UART_Transmit_DMA()</code> 后看返回值</li>
+</ol>
+</div>
+
+<h3>问题4：程序莫名复位（看门狗）</h3>
+<div class="bug-box">
+<p><b>📋 现象：</b>程序每隔一段时间自动重启</p>
+<p><b>🔍 可能原因：</b>独立看门狗(IWDG)没喂狗、窗口看门狗超时。</p>
+<p><b>✅ 排查步骤：</b></p>
+<ol>
+<li>检查有没有启动看门狗但没在循环里喂狗</li>
+<li>喂狗函数：<code>HAL_IWDG_Refresh(&hiwdg)</code>，必须在超时前调用</li>
+<li>检查是否有死循环或长时间阻塞（比如HAL_Delay太久）导致来不及喂狗</li>
+<li>读 <code>RCC->CSR</code> 寄存器看复位原因：IWDGRST位=1就是看门狗复位</li>
+</ol>
+</div>
+`},
+ {id:'30-6',title:'30.6 编译与其他常见错误',kp:['重定义=头文件没加#ifndef','未定义=没加源文件或库','隐式声明=没include头文件','L6406W=栈堆太小'],content:`
+<h3>错误1：Error: L6200E Symbol xxx already defined</h3>
+<div class="bug-box">
+<p><b>📋 现象：</b>链接报错，符号重复定义</p>
+<p><b>🔍 可能原因：</b>头文件被多个.c文件包含，但里面定义了变量/函数（不是声明）。</p>
+<p><b>✅ 排查步骤：</b></p>
+<ol>
+<li>头文件里只能写声明，不能写定义：<code>int a;</code> 是定义，要写成 <code>extern int a;</code></li>
+<li>头文件加保护：
+<pre><code>#ifndef __XXX_H
+#define __XXX_H
+// 内容
+#endif</code></pre>
+</li>
+<li>变量定义放在.c文件里</li>
+</ol>
+</div>
+
+<h3>错误2：Error: #20 identifier xxx is undefined</h3>
+<div class="bug-box">
+<p><b>📋 现象：</b>编译提示某个变量/函数未定义</p>
+<p><b>🔍 可能原因：</b>没include对应头文件，或.c文件没加到工程里。</p>
+<p><b>✅ 排查步骤：</b></p>
+<ol>
+<li>检查有没有 <code>#include "xxx.h"</code></li>
+<li>检查xxx.c文件是否在工程里（Keil左侧栏能看到），不在的话右键Add</li>
+<li>检查头文件路径：Options → C/C++ → Include Paths 有没有包含头文件目录</li>
+</ol>
+</div>
+
+<h3>错误3：Warning: #223-D function xxx declared implicitly</h3>
+<div class="bug-box">
+<p><b>📋 现象：</b>函数隐式声明警告（C99会变错误）</p>
+<p><b>🔍 可能原因：</b>调用了函数但没include它的头文件。</p>
+<p><b>✅ 解决：</b>找到函数定义所在的头文件，include进来。比如 <code>printf</code> 要 <code>#include &lt;stdio.h&gt;</code>，<code>memset</code> 要 <code>#include &lt;string.h&gt;</code>。</p>
+</div>
+
+<h3>错误4：L6406W Execution region RW_IRAM1 size exceeded</h3>
+<div class="bug-box">
+<p><b>📋 现象：</b>RAM超出，链接失败</p>
+<p><b>🔍 可能原因：</b>全局变量/数组太大，超过芯片RAM。</p>
+<p><b>✅ 排查步骤：</b></p>
+<ol>
+<li>看工程.map文件，找哪个变量占了大空间</li>
+<li>把大数组从全局改局部（占栈），或者优化算法减少内存</li>
+<li>检查是不是定义了多余的大缓冲区</li>
+<li>F407VET6有192KB RAM，正常够用，超了说明有大数组</li>
+</ol>
+</div>
+
+<h3>通用排查心法</h3>
+<pre>遇到问题按这个顺序查：
+1. 现象是什么？先准确描述（灯不亮？串口乱码？死机？）
+2. 最小化：注释掉无关代码，只留出问题的部分
+3. 查最基础的：时钟开了？GPIO配了？接线对了？供电了？
+4. 看返回值：HAL库函数都有返回值，判断HAL_OK
+5. 看寄存器：调试模式看实际寄存器值和你想的一样吗
+6. 示波器/逻辑分析仪：看实际波形，软件硬件一目了然
+7. 百度/谷歌报错信息：别人大概率踩过同样的坑</pre>
+`}
 ]}
 ];
 
@@ -2780,7 +3124,18 @@ const QZ = [
 {t:29,q:'RS485接线A/B接反会怎样？',opts:['通信变慢','通信完全失败','没问题','烧模块'],a:1,e:'A/B接反差分信号极性反了，通信完全失败，看模块丝印别接反。'},
 {t:29,q:'串口(UART)空闲时是什么电平？',opts:['低电平','高电平','高阻','不确定'],a:1,e:'UART空闲时是高电平，起始位是低电平，停止位是高电平。'},
 {t:29,q:'LED为什么要串联限流电阻？',opts:['为了更亮','防止电流过大烧LED和IO口','为了省电','没什么用'],a:1,e:'LED导通后电阻很小，不加限流电阻电流过大，会烧LED甚至烧MCU的IO口。'},
-{t:29,q:'USB转TTL模块和MCU串口怎么接？',opts:['TX接TX，RX接RX','TX接RX，RX接TX（交叉）','只接TX就行','只接GND'],a:1,e:'串口要交叉接：模块TXD接MCU_RX，模块RXD接MCU_TX。'}
+{t:29,q:'USB转TTL模块和MCU串口怎么接？',opts:['TX接TX，RX接RX','TX接RX，RX接TX（交叉）','只接TX就行','只接GND'],a:1,e:'串口要交叉接：模块TXD接MCU_RX，模块RXD接MCU_TX。'},
+// 第30章 踩坑排错
+{t:30,q:'Keil里找不到STM32F407芯片型号怎么办？',opts:['重装Keil','安装STM32F4xx_DFP芯片包','换个电脑','重启就行'],a:1,e:'Keil本身不带STM32库，要在Pack Installer里安装STM32F4xx_DFP芯片支持包。'},
+{t:30,q:'Keil编译报各种莫名其妙错误，最可能原因是？',opts:['Keil坏了','安装路径或工程路径有中文','电脑配置太低','网络问题'],a:1,e:'Keil对中文路径支持极差，安装路径和工程路径都必须全英文。'},
+{t:30,q:'CubeMX重新生成代码后用户写的代码没了，因为？',opts:['CubeMX bug','代码写在USER CODE BEGIN/END块外面','没保存','Keil问题'],a:1,e:'用户代码必须写在/* USER CODE BEGIN */和/* USER CODE END */之间，才不会被覆盖。'},
+{t:30,q:'下载提示No target connected，最先检查什么？',opts:['换芯片','检查SWD接线和共地','重装Keil','换电脑'],a:1,e:'先检查SWDIO/SWCLK/GND接线是否正确，必须共地，板子要供电。'},
+{t:30,q:'芯片被锁死（PA13/PA14配成GPIO）怎么救？',opts:['扔了买新的','用ST-Link Utility的Connect under Reset连接后全擦除','重新焊芯片','没办法'],a:1,e:'用ST-Link Utility，选Connect under Reset模式，按住复位连接，然后Full chip erase解锁。'},
+{t:30,q:'串口乱码，波特率对的情况下最可能原因是？',opts:['串口助手坏了','系统时钟配置错误','线太长','芯片坏了'],a:1,e:'波特率对还乱码，大概率是系统时钟配错了，导致串口分频不对。'},
+{t:30,q:'HardFault死机最常见的原因是？',opts:['芯片坏了','栈溢出（函数里开大数组）','电源不稳','温度太高'],a:1,e:'90%的HardFault是栈溢出，函数里定义大数组(如uint8_t buf[1024])撑爆了默认1KB栈。'},
+{t:30,q:'中断服务函数不执行，不可能的原因是？',opts:['没开NVIC','中断函数名拼错','没清中断标志','GPIO没开时钟'],a:3,e:'GPIO时钟影响的是外设不是中断。中断不进通常是没开NVIC、函数名错、没清标志。'},
+{t:30,q:'I2C通信没有应答(HAL_TIMEOUT)，最先查什么？',opts:['换芯片','SDA/SCL上拉电阻和设备地址','加大波特率','换线'],a:1,e:'I2C必须有4.7k上拉，且地址要注意7位/8位区别（HAL用8位左移后的地址）。'},
+{t:30,q:'编译报Symbol already defined重复定义，怎么解决？',opts:['删掉一个','头文件里变量声明加extern，变量定义放.c','重命名','不用管'],a:1,e:'头文件里只能写声明(extern)，变量定义要放在.c文件里，否则多个文件包含时重复定义。'}
 ];
 
 /* ============================================================
