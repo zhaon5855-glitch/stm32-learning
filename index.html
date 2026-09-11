@@ -182,6 +182,7 @@ table th{background:#f1f5f9}
 .sim-out .sys{color:#60a5fa}
 .sim-out .uart{color:#fbbf24}
 .sim-out .pwm{color:#c084fc}
+.sim-out .oled{color:#34d399}
 .sim-vars{background:#f8fafc;border-radius:8px;padding:10px;font-family:Consolas,monospace;font-size:12px;min-height:40px;max-height:150px;overflow:auto;line-height:1.7}
 .sim-vars .sys{color:#94a3b8}
 .sim-var{display:inline-block;background:#e0e7ff;color:#3730a3;padding:1px 7px;border-radius:4px;margin:2px}
@@ -259,6 +260,11 @@ body.dark .theme-toggle{background:rgba(255,255,255,.1)}
 .modal{background:var(--card);border-radius:14px;padding:20px;max-width:90%;max-height:80vh;overflow-y:auto;width:100%}
 .modal h3{margin-bottom:10px}
 </style>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#4f46e5">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="STM32学习">
 </head>
 <body>
 <button class="theme-toggle" onclick="toggleTheme()" title="切换深色模式">🌙</button>
@@ -313,6 +319,16 @@ body.dark .theme-toggle{background:rgba(255,255,255,.1)}
   <div class="card" style="cursor:pointer" onclick="showPage('page-bitop')">
     <h3>🎮 位运算挑战</h3>
     <p>用位运算操作寄存器达成目标，练STM32最难的基本功</p>
+    <div class="pbar"><span style="width:100%"></span></div>
+  </div>
+  <div class="card" style="cursor:pointer" onclick="showPage('page-gencode')">
+    <h3>⚙️ 代码生成器</h3>
+    <p>选引脚和模式，自动生成GPIO初始化代码（寄存器+HAL）</p>
+    <div class="pbar"><span style="width:100%"></span></div>
+  </div>
+  <div class="card" style="cursor:pointer" onclick="showPage('page-chipcmp')">
+    <h3>🔍 多芯片对比</h3>
+    <p>F103 vs F407 寄存器、外设、时钟差异一目了然</p>
     <div class="pbar"><span style="width:100%"></span></div>
   </div>
   <div class="section-title">全部章节（按顺序解锁）</div>
@@ -411,6 +427,27 @@ body.dark .theme-toggle{background:rgba(255,255,255,.1)}
   <div id="bitopBody"></div>
 </div>
 
+<!-- 代码生成器 -->
+<div class="page" id="page-gencode">
+  <div class="topbar"><span class="back" onclick="goHome()">‹</span><h1>⚙️ 代码生成器</h1></div>
+  <div style="padding:12px 14px;font-size:13px;color:var(--sub)">选引脚和模式，自动生成GPIO初始化代码（寄存器版+HAL版）</div>
+  <div id="gencodeBody"></div>
+</div>
+
+<!-- 多芯片对比 -->
+<div class="page" id="page-chipcmp">
+  <div class="topbar"><span class="back" onclick="goHome()">‹</span><h1>🔍 多芯片对比</h1></div>
+  <div style="padding:12px 14px;font-size:13px;color:var(--sub)">STM32F103 vs F407 寄存器与外设差异</div>
+  <div id="chipcmpBody"></div>
+</div>
+
+<!-- 代码收藏夹 -->
+<div class="page" id="page-snippets">
+  <div class="topbar"><span class="back" onclick="goHome()">‹</span><h1>📑 代码收藏夹</h1></div>
+  <div style="padding:12px 14px;font-size:13px;color:var(--sub)">学课时收藏的代码片段，随时查看复制</div>
+  <div id="snippetsBody"></div>
+</div>
+
 <!-- ME -->
 <div class="page" id="page-me">
   <div class="topbar"><h1>我的</h1></div>
@@ -449,6 +486,19 @@ body.dark .theme-toggle{background:rgba(255,255,255,.1)}
   <div class="card" onclick="showPage('page-cards')">
     <h3>🎴 知识卡片</h3>
     <p>翻面卡片，碎片时间快速复习关键点</p>
+  </div>
+  <div class="card" onclick="showPage('page-snippets')">
+    <h3>📑 代码收藏夹</h3>
+    <p>学课时收藏的代码片段，随时查看复制</p>
+  </div>
+  <div class="card" onclick="exportData()">
+    <h3>💾 导出学习数据</h3>
+    <p>备份进度、错题、徽章到JSON文件，换设备不丢</p>
+  </div>
+  <div class="card" onclick="document.getElementById('importFile').click()">
+    <h3>📥 导入学习数据</h3>
+    <p>从备份文件恢复学习记录</p>
+    <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
   </div>
   <div class="card" onclick="showPage('page-prac')">
     <h3>✏️ 做题统计</h3>
@@ -500,6 +550,12 @@ body.dark .theme-toggle{background:rgba(255,255,255,.1)}
       <div class="reg-map-sub" style="margin-top:12px">MODER 模式寄存器 · 每2位控制1个引脚（00输入 01输出 10复用 11模拟）</div>
       <div class="pin-grid" id="pinGridMODER"></div>
     </div>
+    <!-- 虚拟OLED显示 -->
+    <div class="reg-map">
+      <div class="reg-map-title">🖥️ 虚拟 OLED (128×64)</div>
+      <div class="reg-map-sub">用 oled_show("文字") 在OLED上显示，oled_clear()清屏</div>
+      <canvas id="oledCanvas" width="128" height="64" style="background:#0a0a0a;border-radius:6px;width:100%;max-width:256px;display:block;margin:8px auto;image-rendering:pixelated"></canvas>
+    </div>
   </div>
   <div class="card" style="padding:12px">
     <div class="example-chips" id="exChips">
@@ -512,6 +568,7 @@ body.dark .theme-toggle{background:rgba(255,255,255,.1)}
       <span class="chip" onclick="loadEx('adc')">📊 ADC读取</span>
       <span class="chip" onclick="loadEx('pwm')">🌊 PWM呼吸灯</span>
       <span class="chip" onclick="loadEx('key')">🔘 按键中断</span>
+      <span class="chip" onclick="loadEx('oled')">🖥️ OLED显示</span>
       <span style="font-size:12px;color:var(--sub);width:100%;margin:6px 0 4px">C语言基础：</span>
       <span class="chip" onclick="loadEx('ifelse')">🔀 if/else</span>
       <span class="chip" onclick="loadEx('swcase')">🔀 switch</span>
@@ -4230,6 +4287,13 @@ function openLesson(ci,li){
         btn.textContent='已复制✓';setTimeout(()=>btn.textContent='复制',1500);
       });
     };
+    const star=document.createElement('button');
+    star.className='copy-btn';star.textContent='⭐';star.style.marginLeft='4px';
+    star.onclick=()=>{
+      const code=pre.querySelector('code')||pre;
+      addSnippet(code.innerText.trim(), '代码片段');
+    };
+    pre.insertBefore(star,pre.firstChild);
     pre.insertBefore(btn,pre.firstChild);
   });
   applyFs();
@@ -4501,6 +4565,9 @@ function showPage(id){
   if(id==='page-modules')renderModules();
   if(id==='page-challenge')renderChallenge();
   if(id==='page-bitop')renderBitop();
+  if(id==='page-gencode')renderGencode();
+  if(id==='page-chipcmp')renderChipcmp();
+  if(id==='page-snippets')renderSnippets();
   if(id==='page-sim')renderPinMap();
 }
 
@@ -5059,7 +5126,248 @@ function checkBitop(){
   }
 }
 
-function goHome(){showPage('page-home');renderChapters();document.getElementById('searchInput').value='';document.getElementById('searchResult').innerHTML='';}
+/* ========== 代码生成器 ========== */
+const MODES=[
+  {id:'in',name:'输入',val:0},
+  {id:'out',name:'通用输出',val:1},
+  {id:'af',name:'复用功能',val:2},
+  {id:'an',name:'模拟',val:3}
+];
+const OTYPE=[{id:'pp',name:'推挽'},{id:'od',name:'开漏'}];
+const PUPD=[{id:'none',name:'无上下拉',val:0},{id:'up',name:'上拉',val:1},{id:'down',name:'下拉',val:2}];
+const SPEED=[{id:'low',name:'低速',val:2},{id:'med',name:'中速',val:1},{id:'high',name:'高速',val:3}];
+function renderGencode(){
+  const body=document.getElementById('gencodeBody');
+  body.innerHTML=`<div class="hal-sec">
+    <h2 class="hal-h">GPIO 初始化代码生成器</h2>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0">
+      <label>芯片
+        <select id="gcChip" class="quiz-opt" style="width:100%;margin-top:4px" onchange="genCode()">
+          <option value="f407">STM32F407</option>
+          <option value="f103">STM32F103</option>
+        </select>
+      </label>
+      <label>端口
+        <select id="gcPort" class="quiz-opt" style="width:100%;margin-top:4px" onchange="genCode()">
+          ${['A','B','C','D','E'].map(p=>`<option value="${p}">GPIO${p}</option>`).join('')}
+        </select>
+      </label>
+      <label>引脚号
+        <select id="gcPin" class="quiz-opt" style="width:100%;margin-top:4px" onchange="genCode()">
+          ${Array.from({length:16},(_,i)=>`<option value="${i}">Pin ${i}</option>`).join('')}
+        </select>
+      </label>
+      <label>模式
+        <select id="gcMode" class="quiz-opt" style="width:100%;margin-top:4px" onchange="genCode()">
+          ${MODES.map(m=>`<option value="${m.id}">${m.name}</option>`).join('')}
+        </select>
+      </label>
+      <label>输出类型
+        <select id="gcOtype" class="quiz-opt" style="width:100%;margin-top:4px" onchange="genCode()">
+          ${OTYPE.map(o=>`<option value="${o.id}">${o.name}</option>`).join('')}
+        </select>
+      </label>
+      <label>上下拉
+        <select id="gcPupd" class="quiz-opt" style="width:100%;margin-top:4px" onchange="genCode()">
+          ${PUPD.map(p=>`<option value="${p.id}">${p.name}</option>`).join('')}
+        </select>
+      </label>
+      <label>速度
+        <select id="gcSpeed" class="quiz-opt" style="width:100%;margin-top:4px" onchange="genCode()">
+          ${SPEED.map(s=>`<option value="${s.id}">${s.name}</option>`).join('')}
+        </select>
+      </label>
+      <label>初始电平(输出)
+        <select id="gcLevel" class="quiz-opt" style="width:100%;margin-top:4px" onchange="genCode()">
+          <option value="0">低电平</option>
+          <option value="1">高电平</option>
+        </select>
+      </label>
+    </div>
+    <h3 style="font-size:14px;margin:12px 0 6px">📝 寄存器版代码</h3>
+    <pre id="gcReg" style="background:#1e293b;color:#e2e8f0;padding:12px;border-radius:8px;font-size:12px;overflow:auto;position:relative">
+<button class="btn" style="position:absolute;top:6px;right:6px;padding:3px 8px;font-size:11px" onclick="copyCode('gcReg')">复制</button></pre>
+    <h3 style="font-size:14px;margin:12px 0 6px">🔧 HAL库版代码</h3>
+    <pre id="gcHal" style="background:#1e293b;color:#e2e8f0;padding:12px;border-radius:8px;font-size:12px;overflow:auto;position:relative">
+<button class="btn" style="position:absolute;top:6px;right:6px;padding:3px 8px;font-size:11px" onclick="copyCode('gcHal')">复制</button></pre>
+  </div>`;
+  genCode();
+}
+function genCode(){
+  const chip=document.getElementById('gcChip').value;
+  const port=document.getElementById('gcPort').value;
+  const pin=parseInt(document.getElementById('gcPin').value);
+  const mode=document.getElementById('gcMode').value;
+  const otype=document.getElementById('gcOtype').value;
+  const pupd=document.getElementById('gcPupd').value;
+  const speed=document.getElementById('gcSpeed').value;
+  const level=document.getElementById('gcLevel').value;
+  const modeVal=MODES.find(m=>m.id===mode).val;
+  const pupdVal=PUPD.find(p=>p.id===pupd).val;
+  const speedVal=SPEED.find(s=>s.id===speed).val;
+  const isOut=mode==='out'||mode==='af';
+  // F103和F407的时钟使能寄存器不同
+  const rccReg=chip==='f103'?'APB2ENR':'AHB1ENR';
+  const rccBit=chip==='f103'?(port.charCodeAt(0)-65+2):(port.charCodeAt(0)-65);
+  // 寄存器版
+  let reg=`// 开GPIO${port}时钟\nRCC->${rccReg} |= (1<<${rccBit});\n`;
+  reg+=`// 配置模式\nGPIO${port}->MODER &= ~(3<<${pin*2});\n`;
+  if(modeVal) reg+=`GPIO${port}->MODER |= (${modeVal}<<${pin*2});\n`;
+  if(isOut){
+    reg+=`// 输出类型：${otype==='pp'?'推挽':'开漏'}\n`;
+    reg+=otype==='od'?`GPIO${port}->OTYPER |= (1<<${pin});\n`:`GPIO${port}->OTYPER &= ~(1<<${pin});\n`;
+    reg+=`// 速度\nGPIO${port}->OSPEEDR &= ~(3<<${pin*2});\nGPIO${port}->OSPEEDR |= (${speedVal}<<${pin*2});\n`;
+  }
+  if(pupdVal){
+    reg+=`// 上下拉\nGPIO${port}->PUPDR &= ~(3<<${pin*2});\nGPIO${port}->PUPDR |= (${pupdVal}<<${pin*2});\n`;
+  }
+  if(isOut){
+    reg+=`// 初始输出${level==='1'?'高':'低'}电平\nGPIO${port}->BSRR = ${level==='1'?`(1<<${pin})`:`(1<<${pin+16})`};\n`;
+  }
+  const regEl=document.getElementById('gcReg');
+  if(regEl) regEl.innerHTML=`<button class="btn" style="position:absolute;top:6px;right:6px;padding:3px 8px;font-size:11px" onclick="copyCode('gcReg')">复制</button>`+reg.replace(/\n/g,'<br>');
+  // HAL版
+  const halMode={in:'GPIO_MODE_INPUT',out:'GPIO_MODE_OUTPUT_PP',af:'GPIO_MODE_AF_PP',an:'GPIO_MODE_ANALOG'}[mode];
+  const halPupd={none:'GPIO_NOPULL',up:'GPIO_PULLUP',down:'GPIO_PULLDOWN'}[pupd];
+  const halSpeed={low:'GPIO_SPEED_FREQ_LOW',med:'GPIO_SPEED_FREQ_MEDIUM',high:'GPIO_SPEED_FREQ_HIGH'}[speed];
+  let hal=`GPIO_InitTypeDef GPIO_InitStruct = {0};\n`;
+  hal+=`__HAL_RCC_GPIO${port}_CLK_ENABLE();\n\n`;
+  hal+=`HAL_GPIO_WritePin(GPIO${port}, GPIO_PIN_${pin}, ${level==='1'?'GPIO_PIN_SET':'GPIO_PIN_RESET'});\n\n`;
+  hal+=`GPIO_InitStruct.Pin = GPIO_PIN_${pin};\n`;
+  hal+=`GPIO_InitStruct.Mode = ${halMode};\n`;
+  hal+=`GPIO_InitStruct.Pull = ${halPupd};\n`;
+  if(isOut) hal+=`GPIO_InitStruct.Speed = ${halSpeed};\n`;
+  hal+=`HAL_GPIO_Init(GPIO${port}, &GPIO_InitStruct);\n`;
+  const halEl=document.getElementById('gcHal');
+  if(halEl) halEl.innerHTML=`<button class="btn" style="position:absolute;top:6px;right:6px;padding:3px 8px;font-size:11px" onclick="copyCode('gcHal')">复制</button>`+hal.replace(/\n/g,'<br>');
+}
+function copyCode(id){
+  const el=document.getElementById(id);
+  const text=el.innerText.replace(/^复制\n?/,'').trim();
+  navigator.clipboard.writeText(text).then(()=>{
+    const old=el.querySelector('button').textContent;
+    el.querySelector('button').textContent='✓已复制';
+    setTimeout(()=>el.querySelector('button').textContent=old,1200);
+  });
+}
+
+/* ========== 多芯片对比 ========== */
+function renderChipcmp(){
+  const body=document.getElementById('chipcmpBody');
+  body.innerHTML=`<div class="hal-sec">
+    <h2 class="hal-h">STM32F103 vs F407 核心差异</h2>
+    <p style="font-size:13px;color:var(--sub)">工作中经常要在两个系列间切换，记住这些差异少踩坑</p>
+  </div>
+  <div class="hal-sec">
+    <h3 class="hal-h">📋 基本参数对比</h3>
+    <table class="quiz-opt" style="width:100%;font-size:13px;border-collapse:collapse">
+      <tr style="background:var(--bg)"><th style="padding:8px;text-align:left">参数</th><th style="padding:8px">F103</th><th style="padding:8px">F407</th></tr>
+      <tr><td style="padding:8px;border-top:1px solid var(--line)">内核</td><td style="padding:8px;text-align:center;border-top:1px solid var(--line)">Cortex-M3</td><td style="padding:8px;text-align:center;border-top:1px solid var(--line)">Cortex-M4F(带FPU)</td></tr>
+      <tr><td style="padding:8px;border-top:1px solid var(--line)">主频</td><td style="padding:8px;text-align:center;border-top:1px solid var(--line)">72MHz</td><td style="padding:8px;text-align:center;border-top:1px solid var(--line)">168MHz</td></tr>
+      <tr><td style="padding:8px;border-top:1px solid var(--line)">Flash</td><td style="padding:8px;text-align:center;border-top:1px solid var(--line)">64~512KB</td><td style="padding:8px;text-align:center;border-top:1px solid var(--line)">512KB~1MB</td></tr>
+      <tr><td style="padding:8px;border-top:1px solid var(--line)">RAM</td><td style="padding:8px;text-align:center;border-top:1px solid var(--line)">20~64KB</td><td style="padding:8px;text-align:center;border-top:1px solid var(--line)">192KB</td></tr>
+      <tr><td style="padding:8px;border-top:1px solid var(--line)">GPIO时钟</td><td style="padding:8px;text-align:center;border-top:1px solid var(--line)">APB2ENR</td><td style="padding:8px;text-align:center;border-top:1px solid var(--line)">AHB1ENR</td></tr>
+      <tr><td style="padding:8px;border-top:1px solid var(--line)">GPIO时钟位</td><td style="padding:8px;text-align:center;border-top:1px solid var(--line)">bit2开始</td><td style="padding:8px;text-align:center;border-top:1px solid var(--line)">bit0开始</td></tr>
+      <tr><td style="padding:8px;border-top:1px solid var(--line)">GPIO寄存器</td><td style="padding:8px;text-align:center;border-top:1px solid var(--line)">CRL/CRH</td><td style="padding:8px;text-align:center;border-top:1px solid var(--line)">MODER/OTYPER/OSPEEDR/PUPDR</td></tr>
+    </table>
+  </div>
+  <div class="hal-sec">
+    <h3 class="hal-h">⚡ GPIO初始化差异（最常踩坑）</h3>
+    <pre style="background:#1e293b;color:#e2e8f0;padding:12px;border-radius:8px;font-size:12px;overflow:auto">
+<span style="color:#f59e0b">// F103：用CRL(低8脚)/CRH(高8脚)，每引脚4位</span>
+GPIOA->CRL &= ~(0xF<<0);    // 清PA0的4位
+GPIOA->CRL |= (0x3<<0);     // PA0输出模式,50MHz
+GPIOA->CRL |= (0x0<<2);     // 推挽输出
+
+<span style="color:#f59e0b">// F407：用MODER(每引脚2位)+OTYPER+OSPEEDR+PUPDR</span>
+GPIOA->MODER &= ~(3<<0);
+GPIOA->MODER |= (1<<0);     // PA0输出
+GPIOA->OTYPER &= ~(1<<0);   // 推挽
+GPIOA->OSPEEDR |= (3<<0);   // 高速</pre>
+  </div>
+  <div class="hal-sec">
+    <h3 class="hal-h">⏰ 时钟树差异</h3>
+    <table class="quiz-opt" style="width:100%;font-size:13px;border-collapse:collapse">
+      <tr style="background:var(--bg)"><th style="padding:8px;text-align:left">项目</th><th style="padding:8px">F103</th><th style="padding:8px">F407</th></tr>
+      <tr><td style="padding:8px;border-top:1px solid var(--line)">HSE</td><td style="padding:8px;text-align:center;border-top:1px solid var(--line)">8MHz常用</td><td style="padding:8px;text-align:center;border-top:1px solid var(--line)">8MHz常用</td></tr>
+      <tr><td style="padding:8px;border-top:1px solid var(--line)">PLL倍频</td><td style="padding:8px;text-align:center;border-top:1px solid var(--line)">×9=72MHz</td><td style="padding:8px;text-align:center;border-top:1px solid var(--line)">×336/8=168MHz</td></tr>
+      <tr><td style="padding:8px;border-top:1px solid var(--line)">APB1</td><td style="padding:8px;text-align:center;border-top:1px solid var(--line)">36MHz</td><td style="padding:8px;text-align:center;border-top:1px solid var(--line)">42MHz</td></tr>
+      <tr><td style="padding:8px;border-top:1px solid var(--line)">APB2</td><td style="padding:8px;text-align:center;border-top:1px solid var(--line)">72MHz</td><td style="padding:8px;text-align:center;border-top:1px solid var(--line)">84MHz</td></tr>
+    </table>
+    <div class="warn-box" style="margin-top:10px">⚠️ 串口波特率计算依赖APB时钟，F103和F407的APB1频率不同，直接搬代码会乱码！</div>
+  </div>`;
+}
+
+/* ========== 代码收藏夹 ========== */
+let snippets=LS.get('m_snippets',[]);
+function renderSnippets(){
+  const body=document.getElementById('snippetsBody');
+  if(!snippets.length){
+    body.innerHTML=`<div class="hal-sec" style="text-align:center;padding:30px;color:var(--sub)">
+      <div style="font-size:48px">📭</div>
+      <p>还没有收藏的代码</p>
+      <p style="font-size:12px">学课时点击代码块右上角的 ⭐ 即可收藏</p>
+    </div>`;
+    return;
+  }
+  body.innerHTML=snippets.map((s,i)=>`<div class="hal-sec">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <b style="font-size:14px">${s.title}</b>
+      <div>
+        <button class="btn" style="padding:3px 10px;font-size:12px" onclick="copySnippet(${i})">复制</button>
+        <button class="btn ghost" style="padding:3px 10px;font-size:12px" onclick="delSnippet(${i})">删除</button>
+      </div>
+    </div>
+    <pre style="background:#1e293b;color:#e2e8f0;padding:10px;border-radius:8px;font-size:12px;overflow:auto;white-space:pre-wrap">${s.code}</pre>
+  </div>`).join('');
+}
+function copySnippet(i){
+  navigator.clipboard.writeText(snippets[i].code);
+}
+function delSnippet(i){
+  if(!confirm('删除这个收藏？'))return;
+  snippets.splice(i,1);
+  LS.set('m_snippets',snippets);
+  renderSnippets();
+}
+function addSnippet(code,title){
+  snippets.unshift({code,title:title||'代码片段',time:Date.now()});
+  LS.set('m_snippets',snippets);
+  alert('⭐ 已收藏到代码收藏夹');
+}
+
+/* ========== 学习数据备份 ========== */
+function exportData(){
+  const data={};
+  for(let i=0;i<localStorage.length;i++){
+    const k=localStorage.key(i);
+    if(k.startsWith('m_')) data[k]=localStorage.getItem(k);
+  }
+  data._exportTime=new Date().toISOString();
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url; a.download='stm32学习数据备份_'+new Date().toISOString().slice(0,10)+'.json';
+  a.click(); URL.revokeObjectURL(url);
+}
+function importData(e){
+  const file=e.target.files[0];
+  if(!file) return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    try{
+      const data=JSON.parse(ev.target.result);
+      if(!confirm('导入将覆盖当前学习记录，确定继续？'))return;
+      Object.keys(data).forEach(k=>{
+        if(k.startsWith('m_')) localStorage.setItem(k,data[k]);
+      });
+      location.reload();
+    }catch(err){
+      alert('文件格式错误：'+err.message);
+    }
+  };
+  reader.readAsText(file);
+}
 function backFromLesson(){showPage('page-chapter');}
 
 /* ========== 深色模式 ========== */
@@ -5531,6 +5839,14 @@ key:`int main(void){
     }
     delay_ms(100);
   }
+}`,
+oled:`int main(void){
+  oled_clear();
+  oled_show("Hello STM32!");
+  oled_show("Temp: 25.6 C", 0, 16);
+  oled_show("Hum:  60 %", 0, 32);
+  oled_show("LED1 ON  LED2 OFF", 0, 48);
+  printf("OLED显示完成\\n");
 }`
 };
 
@@ -5551,6 +5867,36 @@ function resetSimHW(){
   document.getElementById('rODR').textContent='0x'+simGPIO.ODR.toString(16).padStart(8,'0');
   document.getElementById('simVars').innerHTML='<span class="sys">运行时变量会显示在这里</span>';
   renderPinMap();
+  oledClear();
+}
+
+/* ========== 虚拟OLED绘制 ========== */
+const OLED_W=128, OLED_H=64;
+let oledCurX=0, oledCurY=0;
+function oledClear(){
+  const cv=document.getElementById('oledCanvas');
+  if(!cv) return;
+  const ctx=cv.getContext('2d');
+  ctx.fillStyle='#0a0a0a';
+  ctx.fillRect(0,0,OLED_W,OLED_H);
+  oledCurX=0; oledCurY=0;
+}
+function oledDrawText(s,x,y){
+  const cv=document.getElementById('oledCanvas');
+  if(!cv) return;
+  const ctx=cv.getContext('2d');
+  if(x>=0&&y>=0){oledCurX=x;oledCurY=y;}
+  ctx.fillStyle='#00ff88';
+  ctx.font='8px monospace';
+  ctx.textBaseline='top';
+  // 简单字符绘制：每个字符6px宽，8px高
+  for(let i=0;i<s.length;i++){
+    if(s[i]==='\n'){oledCurX=0;oledCurY+=8;continue;}
+    if(oledCurX>=OLED_W){oledCurX=0;oledCurY+=8;}
+    if(oledCurY>=OLED_H) break;
+    ctx.fillText(s[i], oledCurX, oledCurY);
+    oledCurX+=6;
+  }
 }
 function simPressKey(){ simKeyPressed=true; simPrint('🔘 按键按下\n','sys'); }
 function updateLEDs(){
@@ -5822,6 +6168,17 @@ async function callFunc(name, args){
   }
   if(name==='button_pressed'){
     const p=simKeyPressed; simKeyPressed=false; return p?1:0;
+  }
+  if(name==='oled_show'){
+    let s=args[0]; if(typeof s!=='string') s=String(s);
+    oledDrawText(s, args[1]|0, args[2]|0);
+    simPrint('[OLED] '+s+'\n','oled');
+    return 0;
+  }
+  if(name==='oled_clear'){
+    oledClear();
+    simPrint('[OLED] clear\n','oled');
+    return 0;
   }
   if(name==='sprintf'){
     // sprintf(buf, fmt, ...)  格式化到buf
@@ -6347,6 +6704,10 @@ updateStats();
 renderCheckin();
 renderReport();
 showCard();
+// PWA: 注册 service worker
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('sw.js').catch(()=>{});
+}
 // 模拟器：textarea 滚动/输入时同步高亮层
 (function(){
   const ta=document.getElementById('simCode');
