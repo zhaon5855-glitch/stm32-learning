@@ -170,8 +170,13 @@ table th{background:#f1f5f9}
 .pin-cell.moder-11{background:#fce7f3;color:#9d174d}
 .pin-cell.flash{animation:pinFlash .4s ease}
 @keyframes pinFlash{0%{transform:scale(1.15);filter:brightness(1.4)}100%{transform:scale(1);filter:brightness(1)}}
-.sim-editor{width:100%;box-sizing:border-box;background:#1e293b;color:#e2e8f0;border:none;border-radius:10px;padding:12px;font-family:Consolas,'Courier New',monospace;font-size:13px;line-height:1.6;resize:vertical;min-height:180px}
+.sim-editor{width:100%;box-sizing:border-box;background:transparent;color:#e2e8f0;border:none;border-radius:10px;padding:12px;font-family:Consolas,'Courier New',monospace;font-size:13px;line-height:1.6;resize:vertical;min-height:180px;position:relative;z-index:2}
 .sim-editor:focus{outline:2px solid var(--pri)}
+.sim-code-wrap{position:relative;margin-top:8px;border-radius:10px;overflow:hidden;background:#1e293b}
+.sim-highlight{position:absolute;top:0;left:0;right:0;bottom:0;padding:12px;font-family:Consolas,'Courier New',monospace;font-size:13px;line-height:1.6;pointer-events:none;z-index:1;white-space:pre-wrap;word-wrap:break-word;color:transparent;overflow:hidden}
+.sim-highlight .hl-line{display:block}
+.sim-highlight .hl-line.active{background:rgba(250,204,21,.25);box-shadow:inset 3px 0 0 #facc15}
+.sim-highlight .hl-line.done{background:rgba(34,197,94,.08)}
 .sim-out{background:#0f172a;color:#4ade80;border-radius:10px;padding:12px;font-family:Consolas,monospace;font-size:12px;min-height:80px;max-height:200px;overflow:auto;white-space:pre-wrap;margin-top:8px}
 .sim-out .err{color:#f87171}
 .sim-out .sys{color:#60a5fa}
@@ -478,7 +483,10 @@ body.dark .theme-toggle{background:rgba(255,255,255,.1)}
       <span class="chip" onclick="loadEx('ptr')">👉 指针</span>
       <span class="chip" onclick="loadEx('bitop')">⚙ 位运算</span>
     </div>
-    <textarea class="sim-editor" id="simCode" spellcheck="false" placeholder="在这里写STM32风格的C代码，点击运行看效果..."></textarea>
+    <div class="sim-code-wrap">
+      <div class="sim-highlight" id="simHighlight"><div></div></div>
+      <textarea class="sim-editor" id="simCode" spellcheck="false" placeholder="在这里写STM32风格的C代码，点击运行看效果..."></textarea>
+    </div>
     <div style="display:flex;gap:8px;margin-top:10px;align-items:center">
       <button class="btn" id="simRunBtn" style="flex:1" onclick="runSim()">▶ 运行</button>
       <select id="simSpeed" class="sim-speed" title="运行速度">
@@ -5210,6 +5218,7 @@ function loadEx(name){
   document.getElementById('simCode').value=SIM_EXAMPLES[name];
   document.getElementById('simOut').innerHTML='<span class="sys">// 已加载示例，点击运行</span>';
   resetSimHW();
+  clearHighlight();
 }
 function clearSim(){document.getElementById('simOut').innerHTML='<span class="sys">// 输出区已清空</span>';}
 function resetSimHW(){
@@ -5324,12 +5333,19 @@ function updateSimVars(){
 
 // ---- tokenizer ----
 function simTokenize(src){
-  const toks=[]; let i=0;
+  const toks=[]; let i=0; let line=1;
+  const push=(tok)=>{tok.line=line; toks.push(tok);};
+  const nl=(s)=>{for(let k=0;k<s.length;k++)if(s[k]==='\n')line++;};
   while(i<src.length){
     const c=src[i];
+    if(c==='\n'){line++;i++;continue;}
     if(/\s/.test(c)){i++;continue;}
     if(c==='/'&&src[i+1]==='/'){while(i<src.length&&src[i]!=='\n')i++;continue;}
-    if(c==='/'&&src[i+1]==='*'){i+=2;while(i<src.length&&!(src[i]==='*'&&src[i+1]==='/'))i++;i+=2;continue;}
+    if(c==='/'&&src[i+1]==='*'){
+      i+=2; const start=i;
+      while(i<src.length&&!(src[i]==='*'&&src[i+1]==='/'))i++;
+      nl(src.substring(start,i)); i+=2;continue;
+    }
     if(c==='"'){
       let s=''; i++;
       while(i<src.length&&src[i]!=='"'){
@@ -5337,29 +5353,28 @@ function simTokenize(src){
         else s+=src[i];
         i++;
       }
-      i++; toks.push({t:'str',v:s}); continue;
+      i++; push({t:'str',v:s}); continue;
     }
     if(/[0-9]/.test(c)){
       let n=''; let radix=10;
       if(c==='0'&&(src[i+1]==='x'||src[i+1]==='X')){n='';i+=2;radix=16;while(/[0-9a-fA-F]/.test(src[i]))n+=src[i++];}
       else if(c==='0'&&(src[i+1]==='b'||src[i+1]==='B')){n='';i+=2;radix=2;while(/[01]/.test(src[i]))n+=src[i++];}
       else {while(/[0-9]/.test(src[i]))n+=src[i++];}
-      toks.push({t:'num',v:parseInt(n,radix)}); continue;
+      push({t:'num',v:parseInt(n,radix)}); continue;
     }
     if(/[a-zA-Z_]/.test(c)){
       let id=''; while(/[a-zA-Z0-9_]/.test(src[i]))id+=src[i++];
-      toks.push({t:'id',v:id}); continue;
+      push({t:'id',v:id}); continue;
     }
-    // operators (3-char first)
     const three=src.substr(i,3);
-    if(['<<=','>>='].includes(three)){toks.push({t:'op',v:three});i+=3;continue;}
+    if(['<<=','>>='].includes(three)){push({t:'op',v:three});i+=3;continue;}
     const two=src.substr(i,2);
     if(['==','!=','<=','>=','<<','>>','&&','||','->','++','--','+=','-=','*=','/=','%=','&=','|=','^='].includes(two)){
-      toks.push({t:'op',v:two}); i+=2; continue;
+      push({t:'op',v:two}); i+=2; continue;
     }
-    if('+-*/%&|^!<>~='.includes(c)){toks.push({t:'op',v:c});i++;continue;}
-    if('(){};,[]'.includes(c)){toks.push({t:'pun',v:c});i++;continue;}
-    i++; // skip unknown
+    if('+-*/%&|^!<>~='.includes(c)){push({t:'op',v:c});i++;continue;}
+    if('(){};,[]'.includes(c)){push({t:'pun',v:c});i++;continue;}
+    i++;
   }
   return toks;
 }
@@ -5547,6 +5562,7 @@ function simPrintf(args){
 async function execStmt(tk, p){
   if(p.i>=tk.length) return;
   const t=tk[p.i];
+  if(t.line) highlightLine(t.line);
   // block
   if(t.t==='pun'&&t.v==='{'){p.i++; await execBlock(tk,p); if(tk[p.i]&&tk[p.i].v==='}')p.i++; return;}
   // empty
@@ -5896,6 +5912,43 @@ async function execBlock(tk,p){
 }
 
 let simRunning=false, tk_global=null;
+let simCurLine=0, simDoneLines=new Set();
+// 代码执行轨迹高亮
+function highlightLine(line){
+  if(!line) return;
+  simCurLine=line;
+  simDoneLines.add(line);
+  renderHighlight();
+}
+function renderHighlight(){
+  const hl=document.getElementById('simHighlight');
+  const ta=document.getElementById('simCode');
+  if(!hl||!ta) return;
+  const lines=ta.value.split('\n');
+  const total=lines.length;
+  const esc=(s)=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  let html='';
+  for(let i=0;i<total;i++){
+    const ln=i+1;
+    let cls='hl-line';
+    if(ln===simCurLine) cls+=' active';
+    else if(simDoneLines.has(ln)) cls+=' done';
+    html+=`<div class="${cls}">${esc(lines[i])||' '}</div>`;
+  }
+  hl.innerHTML=html;
+  // 同步滚动：把当前行滚到可视区
+  if(simCurLine>0){
+    const lineH=parseFloat(getComputedStyle(ta).lineHeight)||20.8;
+    const targetTop=(simCurLine-1)*lineH - ta.clientHeight/2 + lineH/2;
+    ta.scrollTop=Math.max(0,targetTop);
+    hl.scrollTop=ta.scrollTop;
+  }
+}
+function clearHighlight(){
+  simCurLine=0; simDoneLines=new Set();
+  const hl=document.getElementById('simHighlight');
+  if(hl) hl.innerHTML='<div></div>';
+}
 async function runSim(){
   const btn=document.getElementById('simRunBtn');
   if(simRunning){ simStop=true; simRunning=false; btn.textContent='▶ 运行'; return; }
@@ -5903,6 +5956,7 @@ async function runSim(){
   simOutEl=document.getElementById('simOut');
   simVars={}; simGPIO={MODER:0,ODR:0}; simStop=false; simRunning=true;
   simFuncs={}; simReturning=false; simBreaking=false;
+  clearHighlight();
   btn.textContent='⏹ 停止';
   resetSimHW();
   simOutEl.innerHTML='<span class="sys">▶ 运行中...\n</span>';
@@ -5962,6 +6016,7 @@ async function runSim(){
     simPrint('\n❌ 错误: '+e.message, 'err');
   }
   simRunning=false; simStop=false;
+  simCurLine=0; renderHighlight();
   btn.textContent='▶ 运行';
 }
 
@@ -5971,6 +6026,15 @@ updateStats();
 renderCheckin();
 renderReport();
 showCard();
+// 模拟器：textarea 滚动/输入时同步高亮层
+(function(){
+  const ta=document.getElementById('simCode');
+  const hl=document.getElementById('simHighlight');
+  if(ta&&hl){
+    ta.addEventListener('scroll',()=>{ hl.scrollTop=ta.scrollTop; hl.scrollLeft=ta.scrollLeft; });
+    ta.addEventListener('input',()=>{ if(simDoneLines.size) renderHighlight(); });
+  }
+})();
 </script>
 </body>
 </html>
