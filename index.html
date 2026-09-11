@@ -1190,6 +1190,417 @@ while(1)
 </ul>
 <div class="kp"><b>毕业作品：</b>画一块自己的STM32控制板，打样回来自己焊，用ST-LINK烧入点灯程序——这是嵌入式学习的里程碑！</div>
 `}
+]},
+/* ===== 第18章 DMA ===== */
+{id:18,ico:'🚚',title:'第18章 DMA直接存储器访问',desc:'不用CPU搬数据，解放单片机',lessons:[
+ {id:'18-1',title:'18.1 DMA是什么',kp:['DMA=直接存储器访问，外设和内存直接传数据','不用CPU参与，CPU可以干别的','适合ADC连续采样、串口大量收发','F407有2个DMA控制器，每个8个流'],content:`
+<h3>DMA的生活比喻</h3>
+<p>你（CPU）在写代码，快递（数据）到了。<b>没有DMA</b>：你得亲自下楼拿快递，写代码被打断。<b>有DMA</b>：快递员直接把包裹放到你桌上（内存），你继续写代码，放好了通知你一声。</p>
+<h3>什么时候用DMA</h3>
+<ul>
+<li>ADC连续采样：每秒采几千个点，CPU挨个读会累死</li>
+<li>串口发大段数据：比如发图片到OLED</li>
+<li>SPI Flash读写：大量数据搬运</li>
+</ul>
+<div class="kp"><b>核心：</b>DMA = 专门搬数据的"小助手"，搬完了发中断通知CPU。</div>
+<table>
+<tr><th></th><th>CPU搬运</th><th>DMA搬运</th></tr>
+<tr><td>CPU占用</td><td>100%盯着</td><td>几乎为0</td></tr>
+<tr><td>速度</td><td>慢</td><td>快</td></tr>
+<tr><td>适合场景</td><td>少量数据</td><td>大量连续数据</td></tr>
+</table>
+`},
+ {id:'18-2',title:'18.2 DMA配置步骤',kp:['开DMA时钟（AHB1）','配置数据流：源地址、目标地址、数据量','设数据宽度、方向、模式（单次/循环）','使能DMA流，启动传输','传输完成进DMA中断'],content:`
+<h3>DMA配置4步</h3>
+<ol>
+<li><b>开时钟</b>：<code>RCC->AHB1ENR |= RCC_AHB1ENR_DMA2EN</code></li>
+<li><b>设地址</b>：源地址（外设）和目标地址（内存）</li>
+<li><b>设参数</b>：数据量、宽度（8/16/32位）、方向、模式</li>
+<li><b>使能</b>：<code>DMA2_Stream0->CR |= DMA_SxCR_EN</code></li>
+</ol>
+<h3>ADC+DMA连续采样示例</h3>
+<pre><code>// 目标：ADC1连续采样，结果存到adc_buf数组
+uint16_t adc_buf[100];  // 存100个采样值
+
+// 1. 开DMA2时钟
+RCC->AHB1ENR |= (1<<22);
+
+// 2. 配置DMA2_Stream0（ADC1用Stream0）
+DMA2_Stream0->PAR  = (uint32_t)&ADC1->DR;        // 源：ADC数据寄存器
+DMA2_Stream0->M0AR = (uint32_t)adc_buf;          // 目标：内存数组
+DMA2_Stream0->NDTR = 100;                         // 传100个数据
+DMA2_Stream0->CR  |= (0<<25)   // 通道0（ADC1）
+                  | (1<<10)    // 内存地址自增
+                  | (1<<8)     // 循环模式（采满自动重来）
+                  | (1<<1)     // 传输完成中断使能
+                  | (1<<0);    // 使能DMA流
+
+// 3. ADC开DMA模式
+ADC1->CR2 |= (1<<8);   // DMA使能
+ADC1->CR2 |= (1<<9);   // DDS：连续发DMA请求</code></pre>
+<div class="warn-box">⚠️ <b>循环模式 vs 单次模式：</b>循环模式采满自动从头再来（适合实时监测）；单次模式采完就停（适合一次性采集）。</div>
+`},
+ {id:'18-3',title:'18.3 DMA+串口收发',kp:['串口发送用DMA：设源为数组，目标为DR','串口接收用DMA：设源为DR，目标为缓冲区','DMA+空闲中断实现不定长接收','注意清DMA标志位'],content:`
+<h3>DMA发送串口数据</h3>
+<p>用DMA发一串字符，CPU不用等：</p>
+<pre><code>char msg[] = "Hello DMA\\n";
+
+DMA1_Stream6->PAR  = (uint32_t)&USART2->DR;   // 目标：串口数据寄存器
+DMA1_Stream6->M0AR = (uint32_t)msg;            // 源：字符串
+DMA1_Stream6->NDTR = sizeof(msg);              // 数据长度
+DMA1_Stream6->CR  |= (1<<0);                   // 使能
+
+USART2->CR3 |= (1<<7);  // 串口DMA发送使能</code></pre>
+<h3>DMA接收（不定长）</h3>
+<p>关键技巧：<b>DMA + 串口空闲中断</b>。DMA一直收，收到一帧数据后总线空闲，触发空闲中断，在中断里读DMA剩余数量算出收了多少。</p>
+<pre><code>void USART2_IRQHandler()
+{
+    if(USART2->SR & (1<<4))  // IDLE空闲标志
+    {
+        USART2->SR;           // 读SR清标志
+        USART2->DR;           // 读DR清标志
+        int len = BUF_SIZE - DMA1_Stream5->NDTR;  // 已接收长度
+        // 处理buf[0..len-1]
+        DMA1_Stream5->CR &= ~(1<<0);  // 关DMA
+        DMA1_Stream5->NDTR = BUF_SIZE; // 重置
+        DMA1_Stream5->CR |= (1<<0);   // 开DMA
+    }
+}</code></pre>
+<div class="kp"><b>为什么用空闲中断？</b>因为不知道对方发多少字节，等总线闲下来就知道一帧结束了。这是串口DMA接收的标准套路。</div>
+`}
+]},
+/* ===== 第19章 看门狗 ===== */
+{id:19,ico:'🐕',title:'第19章 看门狗',desc:'程序跑飞自动重启，产品必备',lessons:[
+ {id:'19-1',title:'19.1 独立看门狗IWDG',kp:['看门狗=倒计时定时器，到0就重启','程序正常运行时要定期喂狗（重置倒计时）','程序跑飞/卡死忘了喂狗→自动重启','IWDG用独立的LSI时钟，主时钟挂了也能工作'],content:`
+<h3>看门狗的比喻</h3>
+<p>看门狗就像一个<b>倒计时炸弹</b>：你设好10秒，每过一会儿你就得去重置它（喂狗）。如果你程序卡死了，没喂狗，倒计时到0，砰——单片机自动重启。</p>
+<h3>为什么需要看门狗</h3>
+<ul>
+<li>程序跑飞（指针越界、电磁干扰）</li>
+<li>死循环卡住</li>
+<li>等待某个永远不会来的事件</li>
+</ul>
+<p>看门狗能让设备自动恢复，不用人去按复位键。<b>产品级项目必须加！</b></p>
+<h3>IWDG配置</h3>
+<pre><code>// IWDG用LSI（约32kHz）作为时钟
+IWDG->KR  = 0x5555;   // 解锁寄存器
+IWDG->PR  = 4;        // 分频 2^4=16，32k/16=2kHz
+IWDG->RLR = 2000;     // 重装载值，2000/2000=1秒
+IWDG->KR  = 0xCCCC;   // 启动看门狗
+
+// 主循环里喂狗
+while(1)
+{
+    做正事();
+    IWDG->KR = 0xAAAA;  // 喂狗，重置倒计时
+}</code></pre>
+<div class="warn-box">⚠️ <b>喂狗只能在主循环喂，不能在中断喂。</b>如果主循环卡死但中断还在跑，在中断喂狗就检测不到故障了。</div>
+`},
+ {id:'19-2',title:'19.2 窗口看门狗WWDG',kp:['WWDG必须在指定时间窗口内喂狗','喂太早或太晚都会复位','用来检测程序是否在预期节奏运行','WWDG用APB1时钟，比IWDG更精确'],content:`
+<h3>WWDG和IWDG的区别</h3>
+<table>
+<tr><th></th><th>IWDG独立看门狗</th><th>WWDG窗口看门狗</th></tr>
+<tr><td>时钟</td><td>LSI独立时钟</td><td>APB1总线时钟</td></tr>
+<tr><td>喂狗时机</td><td>倒计时结束前都可以</td><td>必须在窗口期内</td></tr>
+<tr><td>精度</td><td>低（LSI不准）</td><td>高</td></tr>
+<tr><td>用途</td><td>通用防死机</td><td>精确检测程序节奏</td></tr>
+</table>
+<h3>窗口看门狗的意思</h3>
+<p>设定一个<b>窗口</b>：计数器减到64之前不能喂（喂了复位），减到窗口值之后到64之间可以喂。如果程序跑得太快（频繁喂狗）或太慢（忘了喂），都会复位。</p>
+<pre><code>WWDG->CFR = (1<<9) | 80;   // 窗口值80，使能提前唤醒中断
+WWDG->CR  = (1<<7) | 127;  // 计数值127，使能WWDG
+// 中断里喂狗
+void WWDG_IRQHandler()
+{
+    WWDG->CR = (1<<7) | 127;  // 喂狗
+    WWDG->SR = 0;              // 清标志
+}</code></pre>
+<div class="kp"><b>实际项目：</b>大多数情况用IWDG就够了。WWDG适合对程序运行时序有严格要求的场合。</div>
+`}
+]},
+/* ===== 第20章 RTC ===== */
+{id:20,ico:'⏰',title:'第20章 RTC实时时钟',desc:'掉电也能走的时钟',lessons:[
+ {id:'20-1',title:'20.1 RTC是什么',kp:['RTC=实时时钟，独立的计时单元','用32.768kHz晶振或LSI','掉电后靠VBAT纽扣电池继续走','能设时间、日期、闹钟'],content:`
+<h3>RTC的作用</h3>
+<p>你家电子表断电后时间就乱了，但电脑关机后时间还是对的——因为电脑有纽扣电池给RTC供电。STM32也一样：</p>
+<ul>
+<li>主电源断了，VBAT脚接的纽扣电池继续给RTC供电</li>
+<li>时间、日期、闹钟设置都不丢</li>
+<li>可以定时唤醒待机的单片机</li>
+</ul>
+<h3>时钟源选择</h3>
+<table>
+<tr><th>时钟源</th><th>精度</th><th>说明</th></tr>
+<tr><td>LSE 32.768kHz晶振</td><td>高</td><td>推荐，需要外接32.768kHz晶振</td></tr>
+<tr><td>LSI 32kHz内部RC</td><td>低</td><td>不用外接元件，但误差大</td></tr>
+</table>
+<div class="warn-box">⚠️ 你的板子如果没有32.768kHz晶振，只能用LSI，时间会有误差（每天可能差几分钟）。做时钟产品必须外接晶振。</div>
+`},
+ {id:'20-2',title:'20.2 RTC配置与读时间',kp:['开PWR时钟使能后备域访问','选LSE时钟源并启动','设时间格式（BCD或二进制）','写时间/日期到RTC寄存器','读TR寄存器得时间，DR寄存器得日期'],content:`
+<h3>RTC配置步骤</h3>
+<pre><code>// 1. 使能PWR和后备域
+RCC->APB1ENR |= (1<<28);  // PWR时钟
+PWR->CR |= (1<<8);         // 使能后备域写访问
+
+// 2. 选LSE并启动
+RCC->BDCR |= (1<<0);       // LSEON
+while(!(RCC->BDCR & (1<<1)));  // 等LSE就绪
+RCC->BDCR |= (1<<8);       // RTCSEL=LSE
+RCC->BDCR |= (1<<15);      // RTCEN
+
+// 3. 关闭RTC写保护
+RTC->WPR = 0xCA;
+RTC->WPR = 0x53;
+
+// 4. 进入初始化模式设时间
+RTC->ISR |= (1<<7);        // INIT
+while(!(RTC->ISR & (1<<6)));  // 等INITF
+RTC->TR = 0x235900;        // 23:59:00（BCD格式）
+RTC->DR = 0x2609091;       // 2026年9月12日周六（BCD）
+RTC->ISR &= ~(1<<7);       // 退出初始化</code></pre>
+<h3>读时间</h3>
+<pre><code>uint32_t t = RTC->TR;
+int h = ((t>>16)&0x3F);    // 小时（BCD）
+int m = ((t>>8)&0x7F);     // 分钟
+int s = (t&0x7F);          // 秒
+// BCD转十进制：h = (h>>4)*10 + (h&0xF)</code></pre>
+`},
+ {id:'20-3',title:'20.3 RTC闹钟与唤醒',kp:['闹钟Alarm A/B到点触发中断','闹钟可只匹配时分秒的某几位','唤醒WakeUp定时器周期唤醒低功耗','闹钟中断可唤醒Stop/Standby模式'],content:`
+<h3>RTC闹钟</h3>
+<p>设定一个时间，到了就触发中断，甚至能把待机的单片机唤醒。</p>
+<pre><code>RTC->WPR = 0xCA; RTC->WPR = 0x53;  // 解锁
+RTC->CR &= ~(1<<8);   // 关Alarm A
+while(!(RTC->ISR & (1<<0)));  // 等ALRAWF
+RTC->ALRMAR = 0x070000 | (7<<24);  // 每天7:00:00响
+RTC->CR |= (1<<8);     // 开Alarm A
+RTC->CR |= (1<<12);    // 开Alarm A中断
+
+// NVIC使能RTC闹钟中断
+NVIC_EnableIRQ(RTC_Alarm_IRQn);</code></pre>
+<div class="tip">💡 <b>典型应用：</b>智能手表/温控器——单片机大部分时间在Standby（几μA），RTC闹钟每秒唤醒一次刷新显示，功耗极低。</div>
+`}
+]},
+/* ===== 第21章 低功耗 ===== */
+{id:21,ico:'🔋',title:'第21章 低功耗模式',desc:'电池项目必备，待机几微安',lessons:[
+ {id:'21-1',title:'21.1 三种低功耗模式',kp:['Sleep：CPU停，外设照常，中断唤醒','Stop：CPU+外设停，SRAM保留，EXTI唤醒','Standby：全停，只保留备份域，功耗最低','电流：运行100mA → Sleep 50mA → Stop 0.5mA → Standby 2μA'],content:`
+<h3>STM32低功耗三档</h3>
+<table>
+<tr><th>模式</th><th>CPU</th><th>外设</th><th>SRAM</th><th>功耗</th><th>唤醒方式</th></tr>
+<tr><td>Sleep</td><td>停</td><td>运行</td><td>保留</td><td>~50mA</td><td>任意中断</td></tr>
+<tr><td>Stop</td><td>停</td><td>停</td><td>保留</td><td>~0.5mA</td><td>EXTI</td></tr>
+<tr><td>Standby</td><td>停</td><td>停</td><td>丢</td><td>~2μA</td><td>WKUP/RTC</td></tr>
+</table>
+<h3>怎么选</h3>
+<ul>
+<li><b>Sleep</b>：短暂休息，比如等下一次定时器中断。功耗降一半。</li>
+<li><b>Stop</b>：大部分项目用这个。唤醒后从停止处继续跑。</li>
+<li><b>Standby</b>：极致省电，比如一年换一次电池的设备。唤醒相当于复位。</li>
+</ul>
+<div class="kp"><b>记忆：</b>Sleep=打盹（随时醒），Stop=睡觉（闹钟叫醒），Standby=冬眠（只留心跳）。</div>
+`},
+ {id:'21-2',title:'21.2 Sleep和Stop模式',kp:['Sleep：WFI/WFE指令进入','Stop：设PWR_CR的LPDS+FPDS，WFI进入','Stop唤醒后需要重新配系统时钟','唤醒后程序从WFI下一行继续'],content:`
+<h3>Sleep模式</h3>
+<pre><code>// 进入Sleep，任意中断唤醒
+__WFI();  // Wait For Interrupt
+// 唤醒后从这里继续</code></pre>
+<p>CPU停止，但定时器、串口等外设还在跑，中断一来就醒。</p>
+<h3>Stop模式</h3>
+<pre><code>// 进入Stop
+SCB->SCR |= (1<<2);       // SLEEPDEEP=1
+PWR->CR  |= (1<<1);       // LPDS=1 低功耗深度睡眠
+PWR->CR  |= (1<<9);       // FPDS=1 Flash也停
+__WFI();                  // 进入Stop
+
+// 唤醒后（程序从这里继续）
+// 重要：需要重新配置系统时钟！
+SystemInit();  // 重新配HSE+PLL到168MHz</code></pre>
+<div class="warn-box">⚠️ <b>Stop模式唤醒后时钟变了：</b>Stop时PLL停了，唤醒后默认用16MHz HSI，必须重新调用SystemInit()把时钟配回168MHz，否则程序跑得很慢。</div>
+`},
+ {id:'21-3',title:'21.3 Standby模式',kp:['Standby功耗最低，SRAM和寄存器全丢','唤醒后等同于复位，从main重新开始','只能WKUP引脚或RTC唤醒','进入前清唤醒标志'],content:`
+<h3>Standby模式</h3>
+<p>最省电的模式，单片机几乎全关，只留下RTC和备份寄存器。唤醒后相当于按了复位键，程序从头跑。</p>
+<pre><code>// 清唤醒标志
+PWR->CR |= (1<<2);   // 清WUF
+while(PWR->CSR & (1<<0));  // 等WUF清完
+
+// 使能WKUP引脚（PA0）
+PWR->CSR |= (1<<8);  // EWUP=1
+
+// 进入Standby
+SCB->SCR |= (1<<2);   // SLEEPDEEP
+PWR->CR  |= (1<<1);   // LPDS
+PWR->CR  |= (1<<3);   // PDDS=1 选Standby
+__WFI();</code></pre>
+<h3>怎么判断是正常启动还是Standby唤醒</h3>
+<pre><code>if(PWR->CSR & (1<<1))  // SBFStandby标志
+{
+    // 是从Standby唤醒的
+    PWR->CR |= (1<<3);  // 清SBF
+}</code></pre>
+<div class="tip">💡 <b>电池项目套路：</b>采一次数据 → 存RTC备份寄存器 → 进Standby → RTC闹钟1分钟后唤醒 → 醒来读上次的数据 + 采新的 → 循环。整个设备平均电流几μA，一节电池用几年。</div>
+`}
+]},
+/* ===== 第22章 Flash读写 ===== */
+{id:22,ico:'💾',title:'第22章 内部Flash读写',desc:'掉电保存参数，不用外挂EEPROM',lessons:[
+ {id:'22-1',title:'22.1 Flash结构',kp:['F407有512KB内部Flash，分多个扇区','Flash按页/扇区擦除，不能单字节改','写之前必须先擦除（擦成全0xFF）','擦除次数约1万次，不能频繁写'],content:`
+<h3>Flash是什么</h3>
+<p>单片机内部Flash就是存你程序的地方。除了存程序，还可以分出一块来<b>存用户数据</b>（比如设置参数、累计次数），掉电不丢，省了外挂EEPROM。</p>
+<h3>F407 Flash扇区</h3>
+<table>
+<tr><th>扇区</th><th>地址范围</th><th>大小</th></tr>
+<tr><td>Sector 0</td><td>0x08000000-0x08003FFF</td><td>16KB</td></tr>
+<tr><td>Sector 1</td><td>0x08004000-0x08007FFF</td><td>16KB</td></tr>
+<tr><td>...</td><td>...</td><td>...</td></tr>
+<tr><td>Sector 11</td><td>0x080E0000-0x080FFFFF</td><td>128KB</td></tr>
+</table>
+<div class="warn-box">⚠️ <b>两个铁律：</b><br>1. 写之前必须先擦除（Flash只能把1写成0，不能把0写成1，擦除就是全变成1）<br>2. 擦除按扇区来，不能只擦一个字节</div>
+<div class="warn-box">⚠️ <b>寿命限制：</b>Flash擦写约1万次。不要在循环里频繁写，否则很快坏。存参数一天写一次够用好几年。</div>
+`},
+ {id:'22-2',title:'22.2 Flash擦除与读写代码',kp:['解锁Flash：KEYR写0x45670123再写0xCDEF89AB','擦除扇区：设SER+SNB，START位启动','写数据：设PG位，按半字/字写','操作完重新上锁：CR锁定位'],content:`
+<h3>擦除一个扇区</h3>
+<pre><code>FLASH->KEYR = 0x45670123;   // 解锁密钥1
+FLASH->KEYR = 0xCDEF89AB;   // 解锁密钥2
+
+FLASH->CR &= ~(1<<0);       // 清除PG位
+FLASH->CR |= (1<<1);        // SER=1 扇区擦除
+FLASH->CR |= (11<<3);       // 选Sector 11
+FLASH->CR |= (1<<16);       // START=1 开始擦除
+while(FLASH->SR & (1<<0));  // 等BSY=0
+FLASH->CR &= ~(1<<1);       // 清SER</code></pre>
+<h3>写一个32位数据</h3>
+<pre><code>#define ADDR 0x080E0000  // Sector 11 起始地址
+
+void Flash_Write(uint32_t addr, uint32_t data)
+{
+    FLASH->KEYR = 0x45670123;
+    FLASH->KEYR = 0xCDEF89AB;
+    FLASH->CR |= (1<<0);     // PG=1 编程模式
+    *(volatile uint32_t*)addr = data;  // 写
+    while(FLASH->SR & (1<<0));
+    FLASH->CR &= ~(1<<0);    // 清PG
+    FLASH->CR |= (1<<31);    // 上锁
+}
+
+// 读取直接用指针
+uint32_t val = *(volatile uint32_t*)ADDR;</code></pre>
+<div class="kp"><b>存参数的套路：</b>上电时从Flash读参数到RAM结构体，运行中改RAM，只在需要保存时（比如参数变更后延时几秒）才写回Flash。</div>
+`}
+]},
+/* ===== 第23章 DAC ===== */
+{id:23,ico:'📉',title:'第23章 DAC数模转换',desc:'输出模拟电压，ADC的反向操作',lessons:[
+ {id:'23-1',title:'23.1 DAC原理',kp:['DAC=把数字量转成模拟电压输出','F407有2路12位DAC，输出0~3.3V','数字值N对应电压=N/4095*3.3V','PA4=DAC_OUT1，PA5=DAC_OUT2'],content:`
+<h3>DAC和ADC是反过来的</h3>
+<p>ADC是把电压变成数字（读），DAC是把数字变成电压（写）。</p>
+<p>12位DAC：输入0~4095，输出0~3.3V。</p>
+<pre>数字值 4095 → 3.3V
+数字值 2048 → 1.65V
+数字值 0    → 0V</pre>
+<h3>能做什么</h3>
+<ul>
+<li>输出固定电压（代替PWM+滤波）</li>
+<li>生成波形（正弦波、三角波）</li>
+<li>控制模拟电路（比如音频音量）</li>
+</ul>
+<div class="warn-box">⚠️ DAC输出驱动能力弱（只能带几mA），不能直接带电机、LED大电流。要驱动大功率负载需要加运放或三极管。</div>
+`},
+ {id:'23-2',title:'23.2 DAC配置与波形输出',kp:['开DAC时钟+GPIO模拟模式','写DHR12R1寄存器设输出值','配合定时器+DMA可输出任意波形','输出电压=DHR/4095*VREF'],content:`
+<h3>基础配置输出固定电压</h3>
+<pre><code>RCC->APB1ENR |= (1<<29);  // DAC时钟
+GPIOA->MODER |= (3<<8);    // PA4设为模拟模式
+DAC->CR |= (1<<0);         // 使能DAC通道1
+
+// 输出1.65V
+DAC->DHR12R1 = 2048;       // 2048/4095*3.3 ≈ 1.65V</code></pre>
+<h3>用查表法输出正弦波</h3>
+<pre><code>// 预先生成256个点的正弦表（0~4095）
+const uint16_t sin_tbl[256] = {2048,2098,2148,...};
+
+void SetSin(uint32_t x)
+{
+    DAC->DHR12R1 = sin_tbl[x & 0xFF];
+}
+
+// 主循环或定时器中断里不断调用
+while(1)
+{
+    static uint32_t i=0;
+    SetSin(i++);
+    delay_us(10);  // 10us换一个点，256点约2.56ms一周期≈390Hz
+}</code></pre>
+<div class="tip">💡 <b>进阶：</b>要输出稳定的高频波形，用<b>定时器触发DAC + DMA</b>自动搬表，不用CPU干预，能输出几十kHz的正弦波。</div>
+`}
+]},
+/* ===== 第24章 CAN总线 ===== */
+{id:24,ico:'🚌',title:'第24章 CAN总线',desc:'工业和汽车的通信主力',lessons:[
+ {id:'24-1',title:'24.1 CAN基础',kp:['CAN=两线差分通信（CAN_H/CAN_L）','抗干扰强，最远10公里','多主竞争，优先级高的先发','波特率常用125k/250k/500k/1M'],content:`
+<h3>CAN是什么</h3>
+<p>CAN（Controller Area Network）是德国博世发明的总线协议，用在汽车、工业控制、机器人里。两根线（CAN_H/CAN_L）差分传输，抗干扰极强。</p>
+<h3>对比串口</h3>
+<table>
+<tr><th></th><th>UART串口</th><th>CAN总线</th></tr>
+<tr><td>线数</td><td>TX/RX（点到点）</td><td>CAN_H/CAN_L（一主多从）</td></tr>
+<tr><td>抗干扰</td><td>弱</td><td>强（差分）</td></tr>
+<tr><td>距离</td><td>几米</td><td>最远10公里</td></tr>
+<tr><td>拓扑</td><td>只能一对一</td><td>一条总线挂几十个节点</td></tr>
+</table>
+<h3>CAN的"优先级"机制</h3>
+<p>CAN是多主总线，谁都能发。如果两个节点同时发，ID小的优先级高，先发；ID大的退避等下一轮。这样保证紧急消息不会被淹没。</p>
+<div class="kp"><b>差分信号：</b>CAN_H和CAN_L是一对线，传"1"时两线电压差为0，传"0"时差为2V。外界干扰同时影响两根线，差值不变，所以抗干扰强。</div>
+`},
+ {id:'24-2',title:'24.2 CAN硬件与配置',kp:['需要CAN收发器芯片（TJA1050/SN65HVD230）','STM32的CAN_TX/CAN_RX接收发器','波特率=APB1时钟/(BS1+BS2+1)/预分频','F407的CAN1用PB8/PB9或PA11/PA12'],content:`
+<h3>硬件连接</h3>
+<p>STM32的CAN是逻辑电平，需要加<b>CAN收发器芯片</b>才能接到总线上：</p>
+<pre>STM32 CAN_TX ──→ 收发器 TXD
+STM32 CAN_RX ←── 收发器 RXD
+收发器 CAN_H ──→ 总线 CAN_H
+收发器 CAN_L ──→ 总线 CAN_L</pre>
+<h3>配置500k波特率（APB1=42MHz）</h3>
+<pre><code>RCC->APB1ENR |= (1<<25);  // CAN1时钟
+// GPIO复用（PB8=CAN_RX, PB9=CAN_TX）
+GPIOB->AFR[1] |= (9<<0) | (9<<4);  // AF9
+GPIOB->MODER  |= (2<<16) | (2<<18);
+
+CAN->MCR = (1<<0);   // INRQ=1 进入初始化
+while(CAN->MSR & (1<<0));  // 等INAK
+// 波特率 = 42M / (1+TS1+TS2) / 预分频
+// 500k = 42M / (1+6+7) / 6 = 500k
+CAN->BTR = (6<<24) | (5<<20) | (7<<16) | (5<<0);
+CAN->MCR = 0;  // 退出初始化</code></pre>
+<div class="tip">💡 总线上所有节点的波特率必须一致，否则通信失败。</div>
+`},
+ {id:'24-3',title:'24.3 CAN收发代码',kp:['发送：写Tx邮箱的ID/数据/长度，置请求发送位','接收：配置滤波器收指定ID，从FIFO读','标准帧11位ID，扩展帧29位ID','数据帧最多8字节'],content:`
+<h3>发送一帧</h3>
+<pre><code>void CAN_Send(uint32_t id, uint8_t *data, uint8_t len)
+{
+    while(!(CAN->TSR & (1<<0)));  // 等邮箱0空
+    CAN->sTxMailBox[0].TIR = (id<<21) | (1<<0);  // 标准ID，数据帧
+    CAN->sTxMailBox[0].TDTR = len;                // 数据长度
+    CAN->sTxMailBox[0].TDLR = (data[3]<<24)|(data[2]<<16)|(data[1]<<8)|data[0];
+    CAN->sTxMailBox[0].TDHR = (data[7]<<24)|(data[6]<<16)|(data[5]<<8)|data[4];
+    CAN->sTxMailBox[0].TIR |= (1<<0);  // 请求发送
+}</code></pre>
+<h3>接收（滤波器+FIFO）</h3>
+<pre><code>// 配置滤波器，接收ID=0x123的帧
+CAN->FMR |= (1<<0);   // 滤波器初始化模式
+CAN->FA1R &= ~(1<<0); // 关滤波器0
+CAN->FS1R |= (1<<0);  // 32位宽
+CAN->sFilterRegister[0].FR1 = (0x123<<21);  // 要匹配的ID
+CAN->sFilterRegister[0].FR2 = (0x123<<21);  // 掩码
+CAN->FFA1R &= ~(1<<0); // 关联FIFO0
+CAN->FA1R |= (1<<0);   // 使能滤波器0
+CAN->FMR &= ~(1<<0);   // 退出初始化
+
+// 读FIFO
+if(CAN->RF0R & (3<<0))  // FIFO0有数据
+{
+    uint32_t id = (CAN->sFIFOMailBox[0].RIR >> 21) & 0x7FF;
+    uint8_t len = CAN->sFIFOMailBox[0].RDTR & 0xF;
+    uint32_t lo = CAN->sFIFOMailBox[0].RDLR;
+    uint32_t hi = CAN->sFIFOMailBox[0].RDHR;
+    CAN->RF0R |= (1<<5);  // 释放FIFO
+}</code></pre>
+<div class="kp"><b>滤波器的作用：</b>总线上消息很多，滤波器只让你关心的ID进来，其他丢掉，省CPU。这是CAN高效的关键。</div>
+`}
 ]}
 ];
 
@@ -1251,6 +1662,31 @@ const QZ = [
 {t:13,q:'F407的12位ADC，3.3V对应数字值？',opts:['1023','2047','4095','65535'],a:2,e:'12位=2^12=4096，0~4095对应0~3.3V。'},
 // 第15章
 {t:15,q:'FreeRTOS中任务间传递数据用？',opts:['全局变量','队列Queue','直接调用函数','共享指针'],a:1,e:'队列是任务间安全传递数据的标准方式。'},
+// 第14章
+{t:14,q:'综合项目里各模块之间应该怎么组织？',opts:['全写在main.c里','按功能分模块文件，互相调用','每个模块独立运行','不用分模块'],a:1,e:'按功能分层（驱动层/模块层/主逻辑），改硬件只动驱动，改功能只动模块。'},
+// 第16章
+{t:16,q:'状态机编程的主要好处是？',opts:['代码更短','避免层层if嵌套，逻辑清晰','运行更快','占用内存少'],a:1,e:'状态机用switch-case拆成多个独立状态，每个状态只做一件事，好改好读。'},
+// 第17章
+{t:17,q:'STM32最小系统必须包含哪些部分？',opts:['只需要芯片','芯片+电源+晶振+复位+下载口','芯片+屏幕+按键','芯片+电机+传感器'],a:1,e:'最小系统=芯片+电源去耦+晶振+复位电路+SWD下载口。'},
+// 第18章 DMA
+{t:18,q:'DMA的主要作用是？',opts:['提高CPU计算速度','外设和内存直接传数据，不用CPU','增加内存容量','代替定时器'],a:1,e:'DMA让外设和内存之间直接传数据，CPU不用参与，可以干别的事。'},
+{t:18,q:'DMA循环模式和单次模式的区别是？',opts:['循环模式更快','循环模式传完自动重来，单次传完就停','单次模式更省内存','没区别'],a:1,e:'循环模式适合实时监测（采满自动从头），单次模式适合一次性采集。'},
+// 第19章 看门狗
+{t:19,q:'独立看门狗IWDG的作用是？',opts:['定时中断','程序跑飞/卡死时自动重启','提高主频','存储数据'],a:1,e:'IWDG是倒计时器，程序正常运行要定期喂狗，卡死忘了喂就自动重启。'},
+{t:19,q:'喂狗应该在哪里进行？',opts:['中断服务函数里','主循环里','启动代码里','任意位置都行'],a:1,e:'必须在主循环喂狗。如果在中断喂，主循环卡死但中断还跑就检测不到故障。'},
+// 第20章 RTC
+{t:20,q:'RTC掉电后还能走时靠什么供电？',opts:['主电源','VBAT脚接的纽扣电池','超级电容','USB供电'],a:1,e:'主电源断了，VBAT脚的纽扣电池继续给RTC供电，时间不丢。'},
+// 第21章 低功耗
+{t:21,q:'STM32三种低功耗模式中功耗最低的是？',opts:['Sleep','Stop','Standby','Run'],a:2,e:'Standby功耗约2μA，全停只留备份域；Stop约0.5mA，Sleep约50mA。'},
+{t:21,q:'Stop模式唤醒后需要做什么？',opts:['什么都不用做','重新配置系统时钟','重新烧程序','复位单片机'],a:1,e:'Stop时PLL停了，唤醒后默认16MHz HSI，必须重新调SystemInit()配回168MHz。'},
+// 第22章 Flash
+{t:22,q:'往STM32内部Flash写数据前必须先做什么？',opts:['先擦除','先读一次','先关中断','先复位'],a:0,e:'Flash只能把1写成0，写之前必须先擦除成全0xFF，擦除按扇区进行。'},
+{t:22,q:'内部Flash的擦写寿命大约是？',opts:['100次','1万次','100万次','无限次'],a:1,e:'Flash擦写约1万次，不要在循环里频繁写，存参数一天写一次够用好几年。'},
+// 第23章 DAC
+{t:23,q:'12位DAC输入4095对应输出电压约为？',opts:['0V','1.65V','3.3V','5V'],a:2,e:'12位DAC输入0~4095对应0~3.3V，4095对应满量程3.3V。'},
+// 第24章 CAN
+{t:24,q:'CAN总线用几根数据线通信？',opts:['1根','2根（CAN_H/CAN_L差分）','3根','4根'],a:1,e:'CAN用CAN_H和CAN_L两根差分线，抗干扰强，一条总线可挂几十个节点。'},
+{t:24,q:'CAN总线上两个节点同时发消息，谁先发？',opts:['ID大的','ID小的（优先级高）','随机','同时发'],a:1,e:'CAN是多主总线，ID小的优先级高先发，ID大的退避等下一轮。'},
 ];
 
 /* ============================================================
