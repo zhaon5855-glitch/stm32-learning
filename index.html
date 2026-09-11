@@ -21,7 +21,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
 /* top bar */
 .topbar{position:sticky;top:0;z-index:50;background:var(--pri);color:#fff;padding:12px 16px;display:flex;align-items:center;gap:10px;box-shadow:0 2px 8px rgba(0,0,0,.15)}
 .topbar h1{font-size:17px;font-weight:600;flex:1}
-.topbar .back{font-size:20px;cursor:pointer;width:28px;text-align:center}
+.topbar .back{font-size:22px;cursor:pointer;width:40px;height:40px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:rgba(255,255,255,.12);margin-left:-8px;line-height:1;touch-action:manipulation}
+.topbar .back:active{background:rgba(255,255,255,.3)}
 .topbar .act{font-size:13px;opacity:.9;cursor:pointer}
 .fs-ctrl{font-size:12px;cursor:pointer;opacity:.85;padding:2px 4px;border-radius:4px}
 .fs-ctrl:hover{background:rgba(255,255,255,.15)}
@@ -335,13 +336,13 @@ table th{background:#f1f5f9}
 
 <!-- CHAPTER LESSONS -->
 <div class="page" id="page-chapter">
-  <div class="topbar"><span class="back" onclick="goHome()">‹</span><h1 id="chTitle">章节</h1></div>
+  <div class="topbar"><span class="back" onclick="goHome()">←</span><h1 id="chTitle">章节</h1></div>
   <div id="lessonList"></div>
 </div>
 
 <!-- LESSON -->
 <div class="page" id="page-lesson">
-  <div class="topbar"><span class="back" onclick="backFromLesson()">‹</span><h1 id="lsTitle">课程</h1><span class="fs-ctrl" onclick="changeFs(-1)">A-</span><span class="fs-ctrl" onclick="changeFs(0)">A</span><span class="fs-ctrl" onclick="changeFs(1)">A+</span><span class="act" onclick="toggleFav()" id="favBtn">☆</span></div>
+  <div class="topbar"><span class="back" onclick="backFromLesson()">←</span><h1 id="lsTitle">课程</h1><span class="fs-ctrl" onclick="changeFs(-1)">A-</span><span class="fs-ctrl" onclick="changeFs(0)">A</span><span class="fs-ctrl" onclick="changeFs(1)">A+</span><span class="act" onclick="toggleFav()" id="favBtn">☆</span></div>
   <div class="lesson-body"><div id="lessonContent"></div></div>
 </div>
 
@@ -377,7 +378,7 @@ table th{background:#f1f5f9}
 
 <!-- QUIZ -->
 <div class="page" id="page-quiz">
-  <div class="topbar"><span class="back" onclick="exitQuiz()">‹</span><h1 id="quizTitle">练习</h1><span class="act" id="quizProg">0/0</span></div>
+  <div class="topbar"><span class="back" onclick="exitQuiz()">←</span><h1 id="quizTitle">练习</h1><span class="act" id="quizProg">0/0</span></div>
   <div id="quizArea"></div>
   <div style="padding:12px">
     <button class="btn block" id="quizNext" onclick="quizNext()">下一题</button>
@@ -386,62 +387,62 @@ table th{background:#f1f5f9}
 
 <!-- ROADMAP 学习路线 -->
 <div class="page" id="page-roadmap">
-  <div class="topbar"><span class="back" onclick="goHome()">‹</span><h1>学习路线进度</h1></div>
+  <div class="topbar"><span class="back" onclick="goHome()">←</span><h1>学习路线进度</h1></div>
   <div id="roadmapBody"></div>
 </div>
 
 <!-- HAL库速查手册 -->
 <div class="page" id="page-hal">
-  <div class="topbar"><span class="back" onclick="goHome()">‹</span><h1>📕 HAL库速查手册</h1></div>
+  <div class="topbar"><span class="back" onclick="goHome()">←</span><h1>📕 HAL库速查手册</h1></div>
   <div style="padding:12px 14px;font-size:13px;color:var(--sub)">工作时查函数用，学原理看课程章节</div>
   <div id="halBody"></div>
 </div>
 
 <!-- 面试题板块 -->
 <div class="page" id="page-interview">
-  <div class="topbar"><span class="back" onclick="goHome()">‹</span><h1>🎯 STM32面试题</h1></div>
+  <div class="topbar"><span class="back" onclick="goHome()">←</span><h1>🎯 STM32面试题</h1></div>
   <div style="padding:12px 14px;font-size:13px;color:var(--sub)">求职高频考点，点击题目展开答案</div>
   <div id="interviewBody"></div>
 </div>
 
 <!-- 模块驱动速查 -->
 <div class="page" id="page-modules">
-  <div class="topbar"><span class="back" onclick="goHome()">‹</span><h1>🔌 模块驱动速查</h1></div>
+  <div class="topbar"><span class="back" onclick="goHome()">←</span><h1>🔌 模块驱动速查</h1></div>
   <div style="padding:12px 14px;font-size:13px;color:var(--sub)">常用传感器/显示/通信模块接线+驱动函数</div>
   <div id="modulesBody"></div>
 </div>
 
 <!-- 代码填空闯关 -->
 <div class="page" id="page-challenge">
-  <div class="topbar"><span class="back" onclick="goHome()">‹</span><h1>🧩 代码填空闯关</h1></div>
+  <div class="topbar"><span class="back" onclick="goHome()">←</span><h1>🧩 代码填空闯关</h1></div>
   <div style="padding:12px 14px;font-size:13px;color:var(--sub)">补全代码，用模拟器验证是否达到目标</div>
   <div id="challengeBody"></div>
 </div>
 
 <!-- 寄存器位运算挑战 -->
 <div class="page" id="page-bitop">
-  <div class="topbar"><span class="back" onclick="goHome()">‹</span><h1>🎮 位运算挑战</h1></div>
+  <div class="topbar"><span class="back" onclick="goHome()">←</span><h1>🎮 位运算挑战</h1></div>
   <div style="padding:12px 14px;font-size:13px;color:var(--sub)">用位运算操作寄存器，达成目标状态</div>
   <div id="bitopBody"></div>
 </div>
 
 <!-- 代码生成器 -->
 <div class="page" id="page-gencode">
-  <div class="topbar"><span class="back" onclick="goHome()">‹</span><h1>⚙️ 代码生成器</h1></div>
+  <div class="topbar"><span class="back" onclick="goHome()">←</span><h1>⚙️ 代码生成器</h1></div>
   <div style="padding:12px 14px;font-size:13px;color:var(--sub)">选引脚和模式，自动生成GPIO初始化代码（寄存器版+HAL版）</div>
   <div id="gencodeBody"></div>
 </div>
 
 <!-- 多芯片对比 -->
 <div class="page" id="page-chipcmp">
-  <div class="topbar"><span class="back" onclick="goHome()">‹</span><h1>🔍 多芯片对比</h1></div>
+  <div class="topbar"><span class="back" onclick="goHome()">←</span><h1>🔍 多芯片对比</h1></div>
   <div style="padding:12px 14px;font-size:13px;color:var(--sub)">STM32F103 vs F407 寄存器与外设差异</div>
   <div id="chipcmpBody"></div>
 </div>
 
 <!-- 代码收藏夹 -->
 <div class="page" id="page-snippets">
-  <div class="topbar"><span class="back" onclick="goHome()">‹</span><h1>📑 代码收藏夹</h1></div>
+  <div class="topbar"><span class="back" onclick="goHome()">←</span><h1>📑 代码收藏夹</h1></div>
   <div style="padding:12px 14px;font-size:13px;color:var(--sub)">学课时收藏的代码片段，随时查看复制</div>
   <div id="snippetsBody"></div>
 </div>
@@ -518,7 +519,7 @@ table th{background:#f1f5f9}
 
 <!-- FLASHCARDS -->
 <div class="page" id="page-cards">
-  <div class="topbar"><span class="back" onclick="showPage('page-me')">‹</span><h1>知识卡片</h1></div>
+  <div class="topbar"><span class="back" onclick="showPage('page-me')">←</span><h1>知识卡片</h1></div>
   <div id="cardContent"></div>
   <div class="flash-ctrl">
     <button class="btn ghost" style="flex:1" onclick="prevCard()">‹ 上一张</button>
