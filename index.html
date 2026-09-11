@@ -109,6 +109,28 @@ table th{background:#f1f5f9}
 .tab .ic{font-size:20px;display:block;margin-bottom:1px}
 .tab.active{color:var(--pri)}
 
+/* ===== 代码模拟器 ===== */
+.board-view{background:var(--card);border-radius:12px;padding:16px;margin:12px;text-align:center}
+.board-view .board-title{font-size:13px;color:var(--sub);margin-bottom:12px}
+.led-row{display:flex;justify-content:center;gap:40px;margin:10px 0}
+.led{display:flex;flex-direction:column;align-items:center;gap:6px}
+.led .bulb{width:36px;height:36px;border-radius:50%;background:#374151;border:3px solid #1f2937;transition:all .3s;box-shadow:inset 0 0 8px rgba(0,0,0,.4)}
+.led.on.ds1 .bulb{background:#ef4444;box-shadow:0 0 16px #ef4444,inset 0 0 6px rgba(255,255,255,.3);border-color:#991b1b}
+.led.on.ds2 .bulb{background:#22c55e;box-shadow:0 0 16px #22c55e,inset 0 0 6px rgba(255,255,255,.3);border-color:#15803d}
+.led .lbl{font-size:11px;color:var(--sub);font-family:monospace}
+.reg-row{display:flex;gap:8px;justify-content:center;margin-top:10px;flex-wrap:wrap}
+.reg-chip{background:var(--bg);border-radius:6px;padding:6px 10px;font-size:11px;font-family:monospace}
+.reg-chip b{color:var(--pri)}
+.sim-editor{width:100%;box-sizing:border-box;background:#1e293b;color:#e2e8f0;border:none;border-radius:10px;padding:12px;font-family:Consolas,'Courier New',monospace;font-size:13px;line-height:1.6;resize:vertical;min-height:180px}
+.sim-editor:focus{outline:2px solid var(--pri)}
+.sim-out{background:#0f172a;color:#4ade80;border-radius:10px;padding:12px;font-family:Consolas,monospace;font-size:12px;min-height:80px;max-height:200px;overflow:auto;white-space:pre-wrap;margin-top:8px}
+.sim-out .err{color:#f87171}
+.sim-out .sys{color:#60a5fa}
+.example-chips{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
+.example-chips .chip{background:var(--bg);border:1px solid var(--line);border-radius:16px;padding:5px 12px;font-size:12px;cursor:pointer;white-space:nowrap}
+.example-chips .chip:active{background:var(--pri);color:#fff}
+
+
 /* progress bar */
 .pbar{height:6px;background:#e2e8f0;border-radius:3px;overflow:hidden;margin:8px 0}
 .pbar span{display:block;height:100%;background:var(--ok);transition:width .3s}
@@ -305,12 +327,57 @@ body.dark .theme-toggle{background:rgba(255,255,255,.1)}
   <p style="text-align:center;color:var(--sub);font-size:12px;margin:8px">点击卡片翻面</p>
 </div>
 
+<!-- 代码模拟器 -->
+<div class="page" id="page-sim">
+  <div class="topbar"><h1>⚡ 代码模拟器</h1></div>
+  <div class="board-view">
+    <div class="board-title">尚学 STM32F407VET6 · DS1=PE5(红) DS2=PE6(绿) · 低电平点亮</div>
+    <div class="led-row">
+      <div class="led ds1" id="led1"><div class="bulb"></div><div class="lbl">DS1 / PE5</div></div>
+      <div class="led ds2" id="led2"><div class="bulb"></div><div class="lbl">DS2 / PE6</div></div>
+    </div>
+    <div class="reg-row">
+      <div class="reg-chip">GPIOE->MODER = <b id="rMODER">0x00000000</b></div>
+      <div class="reg-chip">GPIOE->ODR = <b id="rODR">0x00000000</b></div>
+    </div>
+  </div>
+  <div class="card" style="padding:12px">
+    <div class="example-chips" id="exChips">
+      <span class="chip" onclick="loadEx('blink')">💡 LED闪烁</span>
+      <span class="chip" onclick="loadEx('alt')">🔄 交替闪烁</span>
+      <span class="chip" onclick="loadEx('count')">🔢 计数输出</span>
+      <span class="chip" onclick="loadEx('bsrr')">🎯 BSRR点灯</span>
+    </div>
+    <textarea class="sim-editor" id="simCode" spellcheck="false" placeholder="在这里写STM32风格的C代码，点击运行看效果..."></textarea>
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <button class="btn" id="simRunBtn" style="flex:1" onclick="runSim()">▶ 运行</button>
+      <button class="btn ghost" onclick="clearSim()">🗑 清空输出</button>
+    </div>
+    <div class="sim-out" id="simOut"><span class="sys">// 输出区 - printf的内容会显示在这里</span></div>
+  </div>
+  <div class="card">
+    <h3>💡 模拟器支持的语法</h3>
+    <p style="font-size:13px;line-height:1.8;color:var(--sub)">
+      ✅ <code>int a = 5;</code> 整型变量<br>
+      ✅ <code>a = a + 1;</code> 四则运算 + - * / %<br>
+      ✅ <code>printf("a=%d\n", a);</code> 支持 %d %x %s<br>
+      ✅ <code>GPIOE->ODR = 0x20;</code> 写寄存器<br>
+      ✅ <code>GPIOE->BSRR = 0x200000;</code> 位操作<br>
+      ✅ <code>delay_ms(500);</code> 延时（毫秒）<br>
+      ✅ <code>for / while / if / else</code> 控制流<br>
+      ✅ <code>//</code> 和 <code>/* */</code> 注释
+    </p>
+  </div>
+  <div style="height:80px"></div>
+</div>
+
 </div>
 
 <!-- bottom tab -->
 <div class="tabbar">
   <div class="tab active" data-page="page-home" onclick="showPage('page-home')"><span class="ic">🏠</span>学习</div>
   <div class="tab" data-page="page-prac" onclick="showPage('page-prac')"><span class="ic">✏️</span>练习</div>
+  <div class="tab" data-page="page-sim" onclick="showPage('page-sim')"><span class="ic">⚡</span>模拟</div>
   <div class="tab" data-page="page-me" onclick="showPage('page-me')"><span class="ic">👤</span>我的</div>
 </div>
 
@@ -2926,6 +2993,486 @@ function showCard(){
 function flipCard(){cardFlipped=!cardFlipped;showCard();}
 function nextCard(){cardFlipped=false;cardIdx=(cardIdx+1)%CARDS.length;showCard();}
 function prevCard(){cardFlipped=false;cardIdx=(cardIdx-1+CARDS.length)%CARDS.length;showCard();}
+
+/* ============================================================
+   代码模拟器 - 简化C解释器
+   ============================================================ */
+let simVars={}, simGPIO={MODER:0,ODR:0}, simOutEl, simCodeEl;
+let simStop=false, simRunBtn;
+
+const SIM_EXAMPLES={
+blink:`#include "stm32f4xx.h"
+
+int main(void){
+  // 使能GPIOE时钟
+  RCC->AHB1ENR |= 0x10;
+  // PE5设为输出 (MODER5 = 01, 即 bit10=1)
+  GPIOE->MODER = 0x00000400;
+  // ODR初始：bit5=1 -> DS1灭(低电平点亮)
+  GPIOE->ODR = 0x20;
+
+  while(1){
+    GPIOE->ODR = 0x00;   // bit5=0 -> DS1亮
+    delay_ms(300);
+    GPIOE->ODR = 0x20;   // bit5=1 -> DS1灭
+    delay_ms(300);
+  }
+}`,
+alt:`int main(void){
+  RCC->AHB1ENR |= 0x10;
+  // PE5、PE6设为输出
+  GPIOE->MODER = 0x00001400;
+  // 初始全灭
+  GPIOE->ODR = 0x60;
+
+  int i;
+  for(i=0; i<10; i++){
+    GPIOE->ODR = 0x40;  // DS1亮(bit5=0), DS2灭(bit6=1)
+    delay_ms(200);
+    GPIOE->ODR = 0x20;  // DS1灭, DS2亮
+    delay_ms(200);
+    printf("loop i=%d\\n", i);
+  }
+  GPIOE->ODR = 0x60; // 全灭
+  printf("done!\\n");
+}`,
+count:`int main(void){
+  int sum = 0;
+  int i;
+  for(i=1; i<=10; i++){
+    sum = sum + i;
+    printf("i=%d  sum=%d\\n", i, sum);
+    delay_ms(100);
+  }
+  printf("1到10的和=%d\\n", sum);
+  printf("十六进制: 0x%x\\n", sum);
+}`,
+bsrr:`int main(void){
+  RCC->AHB1ENR |= 0x10;
+  GPIOE->MODER = 0x00001400;
+  GPIOE->ODR = 0x60; // 全灭
+
+  // BSRR: 低16位置1，高16位清0
+  GPIOE->BSRR = 0x00000020; // bit5置1 -> DS1灭
+  delay_ms(300);
+  GPIOE->BSRR = 0x00200000; // bit5清0(bit21) -> DS1亮
+  delay_ms(300);
+  GPIOE->BSRR = 0x00000040; // bit6置1 -> DS2灭
+  delay_ms(300);
+  GPIOE->BSRR = 0x00400000; // bit6清0 -> DS2亮
+  delay_ms(300);
+
+  printf("BSRR测试完成\\n");
+}`
+};
+
+function loadEx(name){
+  document.getElementById('simCode').value=SIM_EXAMPLES[name];
+  document.getElementById('simOut').innerHTML='<span class="sys">// 已加载示例，点击运行</span>';
+  resetSimHW();
+}
+function clearSim(){document.getElementById('simOut').innerHTML='<span class="sys">// 输出区已清空</span>';}
+function resetSimHW(){
+  simGPIO={MODER:0,ODR:0};
+  document.getElementById('led1').classList.remove('on');
+  document.getElementById('led2').classList.remove('on');
+  document.getElementById('rMODER').textContent='0x'+simGPIO.MODER.toString(16).padStart(8,'0');
+  document.getElementById('rODR').textContent='0x'+simGPIO.ODR.toString(16).padStart(8,'0');
+}
+function updateLEDs(){
+  // DS1=PE5: ODR bit5==0 -> 亮; DS2=PE6: bit6==0 -> 亮
+  const ds1 = (simGPIO.ODR & 0x20)===0;
+  const ds2 = (simGPIO.ODR & 0x40)===0;
+  document.getElementById('led1').classList.toggle('on', ds1);
+  document.getElementById('led2').classList.toggle('on', ds2);
+  document.getElementById('rODR').textContent='0x'+simGPIO.ODR.toString(16).padStart(8,'0');
+  document.getElementById('rMODER').textContent='0x'+simGPIO.MODER.toString(16).padStart(8,'0');
+}
+function simPrint(txt, cls){
+  const span=document.createElement('span');
+  if(cls) span.className=cls;
+  span.textContent=txt;
+  simOutEl.appendChild(span);
+  simOutEl.scrollTop=simOutEl.scrollHeight;
+}
+function simSleep(ms){return new Promise(r=>setTimeout(r,Math.min(ms,1000)));}
+
+// ---- tokenizer ----
+function simTokenize(src){
+  const toks=[]; let i=0;
+  while(i<src.length){
+    const c=src[i];
+    if(/\s/.test(c)){i++;continue;}
+    if(c==='/'&&src[i+1]==='/'){while(i<src.length&&src[i]!=='\n')i++;continue;}
+    if(c==='/'&&src[i+1]==='*'){i+=2;while(i<src.length&&!(src[i]==='*'&&src[i+1]==='/'))i++;i+=2;continue;}
+    if(c==='"'){
+      let s=''; i++;
+      while(i<src.length&&src[i]!=='"'){
+        if(src[i]==='\\'){i++;const n=src[i];s+={n:'\n',t:'\t',r:'\r','\\':'\\','"':'"','0':'\0'}[n]||n;}
+        else s+=src[i];
+        i++;
+      }
+      i++; toks.push({t:'str',v:s}); continue;
+    }
+    if(/[0-9]/.test(c)){
+      let n=''; 
+      if(c==='0'&&(src[i+1]==='x'||src[i+1]==='X')){n='0x';i+=2;while(/[0-9a-fA-F]/.test(src[i]))n+=src[i++];}
+      else if(c==='0'&&(src[i+1]==='b'||src[i+1]==='B')){n='0b';i+=2;while(/[01]/.test(src[i]))n+=src[i++];}
+      else {while(/[0-9]/.test(src[i]))n+=src[i++];}
+      toks.push({t:'num',v:parseInt(n)}); continue;
+    }
+    if(/[a-zA-Z_]/.test(c)){
+      let id=''; while(/[a-zA-Z0-9_]/.test(src[i]))id+=src[i++];
+      toks.push({t:'id',v:id}); continue;
+    }
+    // operators (3-char first)
+    const three=src.substr(i,3);
+    if(['<<=','>>='].includes(three)){toks.push({t:'op',v:three});i+=3;continue;}
+    const two=src.substr(i,2);
+    if(['==','!=','<=','>=','<<','>>','&&','||','->','++','--','+=','-=','*=','/=','%=','&=','|=','^='].includes(two)){
+      toks.push({t:'op',v:two}); i+=2; continue;
+    }
+    if('+-*/%&|^!<>='.includes(c)){toks.push({t:'op',v:c});i++;continue;}
+    if('(){};,[]'.includes(c)){toks.push({t:'pun',v:c});i++;continue;}
+    i++; // skip unknown
+  }
+  return toks;
+}
+
+// ---- expression parser (precedence climbing) ----
+function parseExpr(tk, pos){
+  return parseOr(tk, pos);
+}
+function parseOr(tk,p){let l=parseAnd(tk,p);while(p.i<tk.length&&tk[p.i].t==='op'&&tk[p.i].v==='||'){p.i++;let r=parseAnd(tk,p);l=(l||r)?1:0;}return l;}
+function parseAnd(tk,p){let l=parseBOr(tk,p);while(p.i<tk.length&&tk[p.i].t==='op'&&tk[p.i].v==='&&'){p.i++;let r=parseBOr(tk,p);l=(l&&r)?1:0;}return l;}
+function parseBOr(tk,p){let l=parseBXor(tk,p);while(p.i<tk.length&&tk[p.i].t==='op'&&tk[p.i].v==='|'){p.i++;let r=parseBXor(tk,p);l=l|r;}return l;}
+function parseBXor(tk,p){let l=parseBAnd(tk,p);while(p.i<tk.length&&tk[p.i].t==='op'&&tk[p.i].v==='^'){p.i++;let r=parseBAnd(tk,p);l=l^r;}return l;}
+function parseBAnd(tk,p){let l=parseEq(tk,p);while(p.i<tk.length&&tk[p.i].t==='op'&&tk[p.i].v==='&'){p.i++;let r=parseEq(tk,p);l=l&r;}return l;}
+function parseEq(tk,p){let l=parseCmp(tk,p);while(p.i<tk.length&&tk[p.i].t==='op'&&['==','!='].includes(tk[p.i].v)){const o=tk[p.i].v;p.i++;let r=parseCmp(tk,p);l=o==='=='?(l===r?1:0):(l!==r?1:0);}return l;}
+function parseCmp(tk,p){let l=parseShift(tk,p);while(p.i<tk.length&&tk[p.i].t==='op'&&['<','>','<=','>='].includes(tk[p.i].v)){const o=tk[p.i].v;p.i++;let r=parseShift(tk,p);l=(o==='<')?(l<r?1:0):(o==='>')?(l>r?1:0):(o==='<=')?(l<=r?1:0):(l>=r?1:0);}return l;}
+function parseShift(tk,p){let l=parseAdd(tk,p);while(p.i<tk.length&&tk[p.i].t==='op'&&['<<','>>'].includes(tk[p.i].v)){const o=tk[p.i].v;p.i++;let r=parseAdd(tk,p);l=o==='<<'?(l<<r):(l>>r);}return l;}
+function parseAdd(tk,p){let l=parseMul(tk,p);while(p.i<tk.length&&tk[p.i].t==='op'&&['+','-'].includes(tk[p.i].v)){const o=tk[p.i].v;p.i++;let r=parseMul(tk,p);l=o==='+'?l+r:l-r;}return l;}
+function parseMul(tk,p){let l=parseUnary(tk,p);while(p.i<tk.length&&tk[p.i].t==='op'&&['*','/','%'].includes(tk[p.i].v)){const o=tk[p.i].v;p.i++;let r=parseUnary(tk,p);l=o==='*'?l*r:(o==='/'?(r===0?0:Math.trunc(l/r)):(r===0?0:l%r));}return l;}
+function parseUnary(tk,p){
+  if(p.i<tk.length&&tk[p.i].t==='op'&&['-','!','~'].includes(tk[p.i].v)){
+    const o=tk[p.i].v;p.i++;let v=parseUnary(tk,p);
+    return o==='-'?-v:(o==='!'?(v?0:1):(~v));
+  }
+  return parsePrimary(tk,p);
+}
+function parsePrimary(tk,p){
+  const t=tk[p.i];
+  if(!t) throw new Error('表达式意外结束');
+  if(t.t==='num'){p.i++;return t.v;}
+  if(t.t==='str'){p.i++;return t.v;}
+  if(t.t==='pun'&&t.v==='('){p.i++;const v=parseExpr(tk,p);if(tk[p.i]&&tk[p.i].v===')')p.i++;return v;}
+  if(t.t==='id'){
+    p.i++;
+    // GPIOE->REG
+    if(p.i<tk.length&&tk[p.i].t==='op'&&tk[p.i].v==='->'){
+      p.i++; const reg=tk[p.i].v; p.i++;
+      return readReg(t.v, reg);
+    }
+    // function call
+    if(p.i<tk.length&&tk[p.i].t==='pun'&&tk[p.i].v==='('){
+      p.i++;
+      const args=[];
+      if(!(tk[p.i]&&tk[p.i].v===')')){
+        args.push(parseExpr(tk,p));
+        while(p.i<tk.length&&tk[p.i].t==='pun'&&tk[p.i].v===','){p.i++;args.push(parseExpr(tk,p));}
+      }
+      if(tk[p.i]&&tk[p.i].v===')')p.i++;
+      return callFunc(t.v, args);
+    }
+    // variable
+    if(simVars[t.v]===undefined) throw new Error('未定义变量: '+t.v);
+    return simVars[t.v];
+  }
+  throw new Error('无法解析: '+JSON.stringify(t));
+}
+
+function readReg(port, reg){
+  if(port==='GPIOE'){
+    if(reg==='ODR') return simGPIO.ODR;
+    if(reg==='MODER') return simGPIO.MODER;
+    if(reg==='IDR') return simGPIO.ODR;
+    if(reg==='BSRR') return 0;
+  }
+  if(port==='RCC'&&reg==='AHB1ENR') return 0x10;
+  return 0;
+}
+function callFunc(name, args){
+  // functions that just return a value (no side effect)
+  if(name==='printf'){ simPrintf(args); return 0; }
+  if(name==='delay_ms'){ return 0; } // handled specially in exec
+  return 0;
+}
+function simPrintf(args){
+  if(args.length===0) return;
+  let fmt=args[0]; if(typeof fmt!=='string') fmt=String(fmt);
+  let ai=1, out='';
+  for(let i=0;i<fmt.length;i++){
+    if(fmt[i]==='%'&&i+1<fmt.length){
+      const f=fmt[i+1]; i++;
+      if(f==='d'||f==='i'){out+=(args[ai++]|0);}
+      else if(f==='x'){out+=(args[ai++]>>>0).toString(16);}
+      else if(f==='X'){out+=(args[ai++]>>>0).toString(16).toUpperCase();}
+      else if(f==='c'){out+=String.fromCharCode(args[ai++]|0);}
+      else if(f==='s'){out+=args[ai++];}
+      else if(f==='%'){out+='%';}
+      else {out+='%'+f;}
+    } else out+=fmt[i];
+  }
+  simPrint(out);
+}
+
+// ---- statement executor ----
+async function execStmt(tk, p){
+  if(p.i>=tk.length) return;
+  const t=tk[p.i];
+  // block
+  if(t.t==='pun'&&t.v==='{'){p.i++; await execBlock(tk,p); if(tk[p.i]&&tk[p.i].v==='}')p.i++; return;}
+  // empty
+  if(t.t==='pun'&&t.v===';'){p.i++; return;}
+  // int declaration
+  if(t.t==='id'&&t.v==='int'){
+    p.i++;
+    while(true){
+      const name=tk[p.i]; if(!name||name.t!=='id') throw new Error('int后需要变量名');
+      p.i++;
+      let val=0;
+      if(tk[p.i]&&tk[p.i].t==='op'&&tk[p.i].v==='='){p.i++; val=parseExpr(tk,p);}
+      simVars[name.v]=val|0;
+      if(tk[p.i]&&tk[p.i].t==='pun'&&tk[p.i].v===','){p.i++;continue;}
+      break;
+    }
+    if(tk[p.i]&&tk[p.i].v===';')p.i++;
+    return;
+  }
+  // if
+  if(t.t==='id'&&t.v==='if'){
+    p.i++;
+    if(tk[p.i]&&tk[p.i].v==='(')p.i++;
+    const cond=parseExpr(tk,p);
+    if(tk[p.i]&&tk[p.i].v===')')p.i++;
+    if(cond){ await execStmt(tk,p); }
+    else { skipStmt(tk,p); }
+    // else
+    if(p.i<tk.length&&tk[p.i].t==='id'&&tk[p.i].v==='else'){
+      p.i++;
+      if(cond){ skipStmt(tk,p); }
+      else { await execStmt(tk,p); }
+    }
+    return;
+  }
+  // while
+  if(t.t==='id'&&t.v==='while'){
+    p.i++;
+    if(tk[p.i]&&tk[p.i].v==='(')p.i++;
+    const condStart=p.i;
+    const condPos={i:p.i};
+    const cond=parseExpr(tk,condPos);
+    p.i=condPos.i;
+    if(tk[p.i]&&tk[p.i].v===')')p.i++;
+    const bodyStart=p.i;
+    if(cond){
+      await execStmt(tk,p);
+      while(true){
+        if(simStop) return;
+        const cp={i:condStart};
+        const c=parseExpr(tk,cp);
+        if(!c) break;
+        p.i=bodyStart;
+        await execStmt(tk,p);
+      }
+    } else { skipStmt(tk,p); }
+    return;
+  }
+  // for
+  if(t.t==='id'&&t.v==='for'){
+    p.i++;
+    if(tk[p.i]&&tk[p.i].v==='(')p.i++;
+    await execStmt(tk,p);
+    const condStart=p.i;
+    const condPos={i:p.i};
+    const cond=parseExpr(tk,condPos);
+    p.i=condPos.i;
+    if(tk[p.i]&&tk[p.i].t==='pun'&&tk[p.i].v===';')p.i++;
+    if(tk[p.i]&&tk[p.i].v===','){p.i++;parseExpr(tk,p);}
+    const incStart=p.i;
+    let depth=0;
+    while(p.i<tk.length&&!(tk[p.i].t==='pun'&&tk[p.i].v===')'&&depth===0)){
+      if(tk[p.i].v==='(')depth++;
+      if(tk[p.i].v===')')depth--;
+      p.i++;
+    }
+    const incEnd=p.i;
+    if(tk[p.i]&&tk[p.i].v===')')p.i++;
+    const bodyStart=p.i;
+    if(cond){
+      await execStmt(tk,p);
+      while(true){
+        if(simStop) return;
+        const ip={i:incStart};
+        if(incEnd>incStart){ await execIncr(tk,ip); }
+        const cp={i:condStart};
+        const c=parseExpr(tk,cp);
+        if(!c) break;
+        p.i=bodyStart;
+        await execStmt(tk,p);
+      }
+    } else { skipStmt(tk,p); }
+    return;
+  }
+  // expression statement (assignment, func call)
+  await execExprStmt(tk,p);
+  if(tk[p.i]&&tk[p.i].v===';')p.i++;
+}
+
+async function execIncr(tk,p){
+  // single expression-statement for for-loop increment (e.g. i++)
+  await execExprStmt(tk,p);
+}
+
+async function execExprStmt(tk,p){
+  const t=tk[p.i];
+  if(!t) return;
+  // GPIOE->REG = expr  (支持 = |= &= ^=)
+  if(t.t==='id'&&p.i+2<tk.length&&tk[p.i+1].t==='op'&&tk[p.i+1].v==='->'){
+    const port=t.v; const reg=tk[p.i+2].v; p.i+=3;
+    if(tk[p.i]&&tk[p.i].t==='op'){
+      const op=tk[p.i].v;
+      if(op==='='){p.i++;const v=parseExpr(tk,p);writeReg(port,reg,v);}
+      else if(op==='|='||op==='&='||op==='^='){
+        p.i++; const v=parseExpr(tk,p);
+        const cur=readReg(port,reg);
+        const nv=op==='|='?(cur|v):(op==='&='?(cur&v):(cur^v));
+        writeReg(port,reg,nv);
+      }
+    }
+    return;
+  }
+  // var = expr or var op= expr or func call
+  if(t.t==='id'){
+    const name=t.v;
+    p.i++;
+    if(tk[p.i]&&tk[p.i].t==='pun'&&tk[p.i].v==='('){
+      // function call statement - handle delay_ms with real sleep
+      p.i++;
+      const args=[];
+      if(!(tk[p.i]&&tk[p.i].v===')')){
+        args.push(parseExpr(tk,p));
+        while(p.i<tk.length&&tk[p.i].t==='pun'&&tk[p.i].v===','){p.i++;args.push(parseExpr(tk,p));}
+      }
+      if(tk[p.i]&&tk[p.i].v===')')p.i++;
+      if(name==='delay_ms'){
+        const ms=Math.min((args[0]|0),1000);
+        await simSleep(ms);
+      } else {
+        callFunc(name, args);
+      }
+      return;
+    }
+    if(tk[p.i]&&tk[p.i].t==='op'&&tk[p.i].v==='='){
+      p.i++; const v=parseExpr(tk,p);
+      simVars[name]=v|0;
+      return;
+    }
+    if(tk[p.i]&&tk[p.i].t==='op'&&['+=','-=','*=','/=','%=','&=','|=','^=','<<=','>>='].includes(tk[p.i].v)){
+      const op=tk[p.i].v; p.i++; const v=parseExpr(tk,p);
+      const cur=simVars[name]|0;
+      const map={'+=':'a+b','-=':'a-b','*=':'a*b','/=':'Math.trunc(a/b)','%=':'a%b','&=':'a&b','|=':'a|b','^=':'a^b','<<=':'a<<b','>>=':'a>>b'};
+      simVars[name]=eval(map[op].replace('a',cur).replace('b',v));
+      return;
+    }
+    if(tk[p.i]&&tk[p.i].t==='op'&&tk[p.i].v==='++'){p.i++;simVars[name]=(simVars[name]|0)+1;return;}
+    if(tk[p.i]&&tk[p.i].t==='op'&&tk[p.i].v==='--'){p.i++;simVars[name]=(simVars[name]|0)-1;return;}
+    // bare expression (just evaluate)
+    p.i--;
+    parseExpr(tk,p);
+    return;
+  }
+  // bare expression
+  parseExpr(tk,p);
+}
+
+function writeReg(port, reg, val){
+  if(port==='GPIOE'){
+    if(reg==='ODR'){simGPIO.ODR=val>>>0;updateLEDs();}
+    else if(reg==='MODER'){simGPIO.MODER=val>>>0;updateLEDs();}
+    else if(reg==='BSRR'){
+      val=val>>>0;
+      simGPIO.ODR|=(val&0xFFFF);
+      simGPIO.ODR&=~((val>>>16)&0xFFFF);
+      simGPIO.ODR=simGPIO.ODR>>>0;
+      updateLEDs();
+    }
+  }
+}
+
+function skipStmt(tk,p){
+  if(p.i>=tk.length) return;
+  const t=tk[p.i];
+  if(t.t==='pun'&&t.v==='{'){
+    p.i++; let d=1;
+    while(p.i<tk.length&&d>0){if(tk[p.i].v==='{')d++;if(tk[p.i].v==='}')d--;p.i++;}
+    return;
+  }
+  if(t.t==='id'&&(t.v==='if'||t.v==='while'||t.v==='for')){
+    // skip to matching
+    if(t.v==='if'||t.v==='while'||t.v==='for'){
+      p.i++;
+      if(tk[p.i]&&tk[p.i].v==='('){let d=1;p.i++;while(p.i<tk.length&&d>0){if(tk[p.i].v==='(')d++;if(tk[p.i].v===')')d--;p.i++;}}
+      skipStmt(tk,p);
+      if(t.v==='if'&&tk[p.i]&&tk[p.i].t==='id'&&tk[p.i].v==='else'){p.i++;skipStmt(tk,p);}
+      return;
+    }
+  }
+  while(p.i<tk.length&&!(tk[p.i].t==='pun'&&tk[p.i].v===';'))p.i++;
+  if(tk[p.i]&&tk[p.i].v===';')p.i++;
+}
+
+async function execBlock(tk,p){
+  while(p.i<tk.length&&!(tk[p.i].t==='pun'&&tk[p.i].v==='}')){
+    if(simStop) return;
+    await execStmt(tk,p);
+  }
+}
+
+let simRunning=false;
+async function runSim(){
+  const btn=document.getElementById('simRunBtn');
+  if(simRunning){ simStop=true; simRunning=false; btn.textContent='▶ 运行'; return; }
+  simCodeEl=document.getElementById('simCode');
+  simOutEl=document.getElementById('simOut');
+  simVars={}; simGPIO={MODER:0,ODR:0}; simStop=false; simRunning=true;
+  btn.textContent='⏹ 停止';
+  resetSimHW();
+  simOutEl.innerHTML='<span class="sys">▶ 运行中...\n</span>';
+  let src=simCodeEl.value;
+  src=src.replace(/^\s*#include[^\n]*/gm,'');
+  src=src.replace(/^\s*#define[^\n]*/gm,'');
+  try{
+    const tk=simTokenize(src);
+    let mi=-1;
+    for(let i=0;i<tk.length-1;i++){
+      if(tk[i].t==='id'&&tk[i].v==='main'&&tk[i+1].t==='pun'&&tk[i+1].v==='('){mi=i;break;}
+    }
+    if(mi<0) throw new Error('找不到 main() 函数');
+    let p={i:mi+2};
+    let d=1;
+    while(p.i<tk.length&&d>0){if(tk[p.i].v==='(')d++;if(tk[p.i].v===')')d--;p.i++;}
+    if(p.i<tk.length&&tk[p.i].v==='{')p.i++;
+    else throw new Error('main函数体缺失');
+    await execBlock(tk,p);
+    if(simStop) simOutEl.insertAdjacentHTML('beforeend','\n<span class="sys">⏹ 已停止</span>');
+    else simOutEl.insertAdjacentHTML('beforeend','\n<span class="sys">✓ 程序运行结束</span>');
+  }catch(e){
+    simPrint('\n❌ 错误: '+e.message, 'err');
+  }
+  simRunning=false; simStop=false;
+  btn.textContent='▶ 运行';
+}
 
 /* init */
 renderChapters();
