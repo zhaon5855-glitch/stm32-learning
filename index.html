@@ -98,6 +98,11 @@ pre .copy-btn{margin-bottom:6px}
 .hal-ol li{margin-bottom:4px}
 .reg-note{background:#ecfdf5;border-left:3px solid #10b981;padding:8px 10px;border-radius:6px;margin:8px 0;font-size:12.5px;color:#065f46}
 .link{color:var(--pri);text-decoration:underline;cursor:pointer}
+/* interview */
+.iv-q{padding:10px 12px;margin:8px 0;background:#f8fafc;border-radius:8px;cursor:pointer;border-left:3px solid var(--pri)}
+.iv-qt{font-size:14px;font-weight:600;color:var(--txt);line-height:1.5}
+.iv-ans{display:none;margin-top:8px;padding-top:8px;border-top:1px dashed var(--line);font-size:13px;color:var(--sub);line-height:1.7}
+.iv-ans.show{display:block}
 table{width:100%;border-collapse:collapse;margin:10px 0;font-size:13px}
 table th,table td{border:1px solid var(--line);padding:6px 8px;text-align:left}
 table th{background:#f1f5f9}
@@ -153,6 +158,12 @@ table th{background:#f1f5f9}
 .sim-out{background:#0f172a;color:#4ade80;border-radius:10px;padding:12px;font-family:Consolas,monospace;font-size:12px;min-height:80px;max-height:200px;overflow:auto;white-space:pre-wrap;margin-top:8px}
 .sim-out .err{color:#f87171}
 .sim-out .sys{color:#60a5fa}
+.sim-out .uart{color:#fbbf24}
+.sim-out .pwm{color:#c084fc}
+.sim-vars{background:#f8fafc;border-radius:8px;padding:10px;font-family:Consolas,monospace;font-size:12px;min-height:40px;max-height:150px;overflow:auto;line-height:1.7}
+.sim-vars .sys{color:#94a3b8}
+.sim-var{display:inline-block;background:#e0e7ff;color:#3730a3;padding:1px 7px;border-radius:4px;margin:2px}
+.sim-speed{padding:6px 4px;border:1px solid var(--line);border-radius:6px;font-size:12px;background:var(--bg);color:var(--txt)}
 .example-chips{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
 .example-chips .chip{background:var(--bg);border:1px solid var(--line);border-radius:16px;padding:5px 12px;font-size:12px;cursor:pointer;white-space:nowrap}
 .example-chips .chip:active{background:var(--pri);color:#fff}
@@ -252,6 +263,16 @@ body.dark .theme-toggle{background:rgba(255,255,255,.1)}
     <p>寄存器 vs HAL对比、CubeMX流程、常用HAL函数示例+底层寄存器标注、HAL踩坑排错</p>
     <div class="pbar"><span style="width:100%"></span></div>
   </div>
+  <div class="card" style="cursor:pointer" onclick="showPage('page-interview')">
+    <h3>🎯 STM32面试题</h3>
+    <p>求职高频考点：C语言/STM32底层/RTOS/开放性题，带标准答案+追问</p>
+    <div class="pbar"><span style="width:100%"></span></div>
+  </div>
+  <div class="card" style="cursor:pointer" onclick="showPage('page-modules')">
+    <h3>🔌 模块驱动速查</h3>
+    <p>OLED/DHT11/DS18B20/MPU6050/ESP8266等模块接线+关键驱动函数</p>
+    <div class="pbar"><span style="width:100%"></span></div>
+  </div>
   <div class="section-title">全部章节（按顺序解锁）</div>
   <div id="chapList"></div>
 </div>
@@ -318,6 +339,20 @@ body.dark .theme-toggle{background:rgba(255,255,255,.1)}
   <div class="topbar"><span class="back" onclick="goHome()">‹</span><h1>📕 HAL库速查手册</h1></div>
   <div style="padding:12px 14px;font-size:13px;color:var(--sub)">工作时查函数用，学原理看课程章节</div>
   <div id="halBody"></div>
+</div>
+
+<!-- 面试题板块 -->
+<div class="page" id="page-interview">
+  <div class="topbar"><span class="back" onclick="goHome()">‹</span><h1>🎯 STM32面试题</h1></div>
+  <div style="padding:12px 14px;font-size:13px;color:var(--sub)">求职高频考点，点击题目展开答案</div>
+  <div id="interviewBody"></div>
+</div>
+
+<!-- 模块驱动速查 -->
+<div class="page" id="page-modules">
+  <div class="topbar"><span class="back" onclick="goHome()">‹</span><h1>🔌 模块驱动速查</h1></div>
+  <div style="padding:12px 14px;font-size:13px;color:var(--sub)">常用传感器/显示/通信模块接线+驱动函数</div>
+  <div id="modulesBody"></div>
 </div>
 
 <!-- ME -->
@@ -405,6 +440,10 @@ body.dark .theme-toggle{background:rgba(255,255,255,.1)}
       <span class="chip" onclick="loadEx('alt')">🔄 交替闪烁</span>
       <span class="chip" onclick="loadEx('count')">🔢 计数</span>
       <span class="chip" onclick="loadEx('bsrr')">🎯 BSRR</span>
+      <span class="chip" onclick="loadEx('uart')">📡 串口发送</span>
+      <span class="chip" onclick="loadEx('adc')">📊 ADC读取</span>
+      <span class="chip" onclick="loadEx('pwm')">🌊 PWM呼吸灯</span>
+      <span class="chip" onclick="loadEx('key')">🔘 按键中断</span>
       <span style="font-size:12px;color:var(--sub);width:100%;margin:6px 0 4px">C语言基础：</span>
       <span class="chip" onclick="loadEx('ifelse')">🔀 if/else</span>
       <span class="chip" onclick="loadEx('swcase')">🔀 switch</span>
@@ -415,27 +454,36 @@ body.dark .theme-toggle{background:rgba(255,255,255,.1)}
       <span class="chip" onclick="loadEx('bitop')">⚙ 位运算</span>
     </div>
     <textarea class="sim-editor" id="simCode" spellcheck="false" placeholder="在这里写STM32风格的C代码，点击运行看效果..."></textarea>
-    <div style="display:flex;gap:8px;margin-top:10px">
+    <div style="display:flex;gap:8px;margin-top:10px;align-items:center">
       <button class="btn" id="simRunBtn" style="flex:1" onclick="runSim()">▶ 运行</button>
-      <button class="btn ghost" onclick="clearSim()">🗑 清空输出</button>
+      <select id="simSpeed" class="sim-speed" title="运行速度">
+        <option value="0.3">🐢 0.3x</option>
+        <option value="1" selected>⚡ 1x</option>
+        <option value="3">🚀 3x</option>
+        <option value="10">⚡⚡ 10x</option>
+      </select>
+      <button class="btn ghost" onclick="clearSim()">🗑 清空</button>
     </div>
-    <div class="sim-out" id="simOut"><span class="sys">// 输出区 - printf的内容会显示在这里</span></div>
+    <div class="sim-out" id="simOut"><span class="sys">// 输出区 - printf和串口内容会显示在这里</span></div>
+  </div>
+  <div class="card">
+    <h3>👁 变量监视</h3>
+    <div id="simVars" class="sim-vars"><span class="sys">运行时变量会显示在这里</span></div>
   </div>
   <div class="card">
     <h3>💡 模拟器支持的语法</h3>
     <p style="font-size:13px;line-height:1.8;color:var(--sub)">
-      ✅ <code>int a = 5;</code> 整型变量<br>
-      ✅ <code>int a[5] = {1,2,3,4,5};</code> 数组<br>
-      ✅ <code>int *p = &a;</code> 指针 + 取地址<br>
-      ✅ <code>a = a + 1;</code> 四则/位运算<br>
-      ✅ <code>printf("a=%d\n", a);</code> 支持 %d %x %s %c<br>
-      ✅ <code>GPIOE->ODR = 0x20;</code> 写寄存器<br>
-      ✅ <code>delay_ms(500);</code> 延时（毫秒）<br>
-      ✅ <code>if / else / switch / for / while</code> 控制流<br>
-      ✅ <code>int add(int a,int b){...}</code> 自定义函数<br>
-      ✅ <code>return</code> <code>break</code> 流程跳转<br>
-      ✅ <code>//</code> 和 <code>/* */</code> 注释
+      ✅ <code>int a = 5;</code> 整型 / <code>int a[5]</code> 数组 / <code>int *p</code> 指针<br>
+      ✅ 四则/位运算 <code>a+b &amp; | ^ ~ &lt;&lt; &gt;&gt;</code><br>
+      ✅ <code>printf("%d %x %s", a, b, s)</code> 支持 %d %x %s %c<br>
+      ✅ <code>GPIOE->ODR = 0x20;</code> 写寄存器 (支持GPIOA~GPIOE)<br>
+      ✅ <code>delay_ms(500);</code> 延时<br>
+      ✅ <code>digitalRead(0)</code> 读PA0电平 / <code>analogRead(0)</code> 读ADC值<br>
+      ✅ <code>uart_send("hello")</code> 模拟串口发送 / <code>pwm_write(500)</code> PWM占空比<br>
+      ✅ <code>button_pressed()</code> 模拟按键按下（按下方按钮触发）<br>
+      ✅ <code>if/else/switch/for/while</code> + 自定义函数 + <code>return/break</code>
     </p>
+    <button class="btn ghost" style="width:100%;margin-top:8px" onclick="simPressKey()">🔘 模拟按键按下</button>
   </div>
   <div style="height:80px"></div>
 </div>
@@ -2636,6 +2684,46 @@ if(error) printf("ERROR at line %d\\n", __LINE__);</code></pre>
 <tr><td>编译报错</td><td>分号漏了？大括号配对？变量先声明了？</td></tr>
 </table>
 <div class="kp"><b>新手心法：</b>90%的问题是低级错误（没开时钟、接错线、下标越界）。别急着怀疑芯片或编译器，先检查自己的代码。</div>
+`},
+ {id:'27-5',title:'27.5 数据手册怎么看',kp:['Datasheet是芯片数据手册，RM是参考手册','查寄存器去RM的对应外设章节','查电气参数(电压/电流)去Datasheet','AF复用表告诉你引脚能当什么用'],content:`
+<h3>两份手册的区别</h3>
+<table>
+<tr><th>手册</th><th>全称</th><th>查什么</th></tr>
+<tr><td>Datasheet</td><td>STM32F407xx Datasheet</td><td>引脚定义、电气参数、封装、绝对最大额定值</td></tr>
+<tr><td>Reference Manual (RM)</td><td>RM0090</td><td>所有外设寄存器定义、位说明、功能原理</td></tr>
+</table>
+<div class="kp"><b>记法：</b>硬件接线/电压电流看Datasheet，写代码/配寄存器看RM。</div>
+
+<h3>实战1：查寄存器位定义</h3>
+<p>比如想知道GPIOE->ODR每一位的含义：</p>
+<ol>
+<li>打开RM0090 → 搜索 "GPIOx_ODR"</li>
+<li>找到表格：bit0~bit15 对应 ODR0~ODR15，0=输出低，1=输出高</li>
+<li>再看GPIOx_BSRR：高16位写1清ODR，低16位写1置ODR</li>
+</ol>
+
+<h3>实战2：查引脚复用功能</h3>
+<p>PA9能不能当串口TX？查Datasheet的"Alternate function mapping"表：</p>
+<pre>PA9: AF0=SYS  AF1=TIM1_CH2  AF7=USART1_TX
+所以PA9配AF7就能当USART1_TX用</pre>
+<p>代码里就是 <code>GPIO_InitStruct.Alternate = GPIO_AF7_USART1;</code></p>
+
+<h3>实战3：查电气参数</h3>
+<p>GPIO能输出多大电流？查Datasheet的"I/O static characteristics"：</p>
+<pre>单个I/O最大输出电流：25mA
+所有I/O总电流不能超：120mA (VDD)</pre>
+<p>所以GPIO直接驱动继电器(要50mA)会烧IO，必须加三极管。</p>
+
+<h3>查手册的常用搜索关键词</h3>
+<ul>
+<li>"GPIOx_ODR" / "GPIOx_MODER" → GPIO寄存器</li>
+<li>"Alternate function" → 引脚复用表</li>
+<li>"Electrical characteristics" → 电气参数</li>
+<li>"Memory map" → 寄存器基地址</li>
+<li>"USART" → 串口章节</li>
+<li>"RCC" → 时钟配置</li>
+</ul>
+<div class="tip">💡 <b>习惯：</b>遇到不确定的寄存器或引脚，先打开手册查，别凭感觉写。查手册是嵌入式工程师的基本功。</div>
 `}
 ]},
 /* ===== 第28章 时钟系统 ===== */
@@ -4266,6 +4354,8 @@ function showPage(id){
   if(id==='page-cards')showCard();
   if(id==='page-roadmap')renderRoadmap();
   if(id==='page-hal')renderHal();
+  if(id==='page-interview')renderInterview();
+  if(id==='page-modules')renderModules();
 }
 
 /* ========== 学习路线 ========== */
@@ -4472,6 +4562,151 @@ function renderHal(){
   document.getElementById('halBody').innerHTML=HAL_CONTENT;
 }
 
+/* ========== 面试题 ========== */
+const INTERVIEW_QA=[
+  {cat:'C语言基础',q:'volatile关键字有什么用？单片机里什么地方必须用？',a:'volatile告诉编译器"这个变量随时可能被外部改变，不要优化掉每次读取"。<br>必须用的场景：<br>1) 硬件寄存器（如GPIO->IDR）<br>2) 中断服务函数和主循环共享的全局变量<br>3) 多线程共享变量<br>不加volatile，编译器可能把变量缓存到寄存器，中断改了值主循环看不到，导致死循环。'},
+  {cat:'C语言基础',q:'static关键字有哪几种用法？',a:'两种：<br>1) <b>局部变量</b>：函数退出后值不销毁，下次调用保留上次的值（只初始化一次）。<br>2) <b>全局变量/函数</b>：限制作用域只在本.c文件内，防止和其他文件重名。<br>嵌入式里常用static把模块内部变量/函数隐藏起来，只对外暴露必要的接口。'},
+  {cat:'C语言基础',q:'指针和数组的区别？数组名是什么？',a:'数组是连续内存空间，数组名是首元素地址（常量指针，不能改）。<br>指针是存地址的变量，可以修改指向。<br>int a[5];  a是首元素地址，&a是整个数组的地址（类型不同）。<br>数组作为函数参数会退化成指针，丢失长度信息，所以要单独传长度。'},
+  {cat:'C语言基础',q:'结构体大小怎么算？什么是内存对齐？',a:'结构体大小不等于成员大小之和，要按最大成员对齐。<br>规则：每个成员的偏移量必须是自身大小的倍数，总大小是最大成员的倍数。<br>例：struct{char a; int b;} → 大小8字节（a占1+填充3，b占4）。<br>嵌入式里通信协议的结构体要注意对齐，必要时用__attribute__((packed))取消对齐。'},
+  {cat:'STM32底层',q:'STM32的中断优先级怎么理解？抢占优先级和响应优先级区别？',a:'STM32用4位优先级（可分组），分为抢占优先级和响应(子)优先级。<br><b>抢占优先级</b>：高的可以打断低的中断（嵌套）。<br><b>响应优先级</b>：抢占优先级相同时，响应优先级高的先执行，但不能嵌套。<br>数字越小优先级越高。HAL_NVIC_SetPriority(IRQn, PreemptPriority, SubPriority)。'},
+  {cat:'STM32底层',q:'GPIO有哪几种工作模式？分别用在什么场景？',a:'8种模式：<br>1) <b>输入浮空</b>：按键检测（外部给电平）<br>2) <b>输入上拉/下拉</b>：按键，省外部电阻<br>3) <b>模拟输入</b>：ADC采集<br>4) <b>推挽输出</b>：LED、控制信号（能输出高低）<br>5) <b>开漏输出</b>：I2C（需外部上拉）<br>6) <b>复用推挽</b>：串口TX、SPI<br>7) <b>复用开漏</b>：I2C的SCL/SDA'},
+  {cat:'STM32底层',q:'串口波特率怎么计算？',a:'波特率 = fCK / (16 * USARTDIV)，其中USARTDIV写在BRR寄存器。<br>F407串口时钟84MHz，要115200波特率：<br>USARTDIV = 84000000 / (16*115200) = 45.57<br>整数部分45→BRR=45<<4，小数0.57*16≈9，BRR=45*16+9=729。<br>HAL库自动算，你只要填波特率。'},
+  {cat:'STM32底层',q:'什么是HardFault？怎么排查？',a:'HardFault是严重错误异常，CPU无法继续执行。<br>常见原因：数组越界、野指针、栈溢出、除零、访问未映射内存。<br>排查方法：<br>1) 在HardFault_Handler设断点，看LR(链接寄存器)找返回地址<br>2) 看调用栈回溯到出错函数<br>3) 检查数组下标、指针初始化<br>4) 90%是栈溢出，把Stack_Size改大试试'},
+  {cat:'RTOS',q:'FreeRTOS的任务状态有哪些？',a:'4种状态：<br>1) <b>运行态(Running)</b>：正在执行<br>2) <b>就绪态(Ready)</b>：等待CPU，同优先级就绪队列轮询<br>3) <b>阻塞态(Blocked)</b>：等事件(延时/信号量/队列)<br>4) <b>挂起态(Suspended)</b>：vTaskSuspend挂起，不会被调度<br>高优先级任务就绪时，会抢占低优先级任务。'},
+  {cat:'RTOS',q:'队列和信号量的区别？分别用在哪？',a:'<b>队列</b>：传递数据，生产者放数据消费者取数据，有深度。用在任务间传大块数据（如传感器数据）。<br><b>信号量</b>：传递"事件"（计数），不传数据。二值信号量用于同步（如中断通知任务），计数信号量用于资源计数。<br>简单说：传数据用队列，通知事件用信号量。'},
+  {cat:'RTOS',q:'什么是优先级反转？怎么解决？',a:'低优先级任务持有资源，高优先级任务等资源，但中间优先级任务抢占了CPU，导致高优先级任务反而等更久。<br>解决：用<b>互斥锁(Mutex)</b>，它有优先级继承协议——持有锁的低优先级任务临时提升到等待它的最高优先级任务的优先级。<br>注意：二值信号量没有优先级继承，不能替代互斥锁。'},
+  {cat:'开放性',q:'程序跑飞了怎么办？说说你的排查思路',a:'1) 先看是不是HardFault：在HardFault_Handler打断点，看寄存器和调用栈<br>2) 看最近改了什么：新写的代码优先查<br>3) 查最常见原因：数组越界、指针没初始化、栈溢出<br>4) 用二分法注释代码，定位出问题的模块<br>5) 看看门狗有没有复位（读RCC->CSR）<br>6) 用示波器/逻辑分析仪看关键信号<br>核心：先复现→缩小范围→定位根因→修复验证。'},
+  {cat:'开放性',q:'如何设计一个稳定的嵌入式系统？',a:'1) <b>异常处理</b>：每个外设操作都要返回状态码，失败要能降级<br>2) <b>看门狗</b>：独立看门狗防死机，超时自动复位<br>3) <b>输入保护</b>：按键消抖、通信数据校验(CRC)、超时重传<br>4) <b>电源监控</b>：低电压检测(BOR)，掉电时保存关键数据<br>5) <b>模块化</b>：驱动层/业务层分离，便于测试和替换<br>6) <b>不阻塞</b>：中断快进快出，任务用事件驱动不用死等<br>7) <b>看门狗喂狗</b>：在主循环/空闲任务喂，不能在中断里喂'},
+  {cat:'开放性',q:'中断里能做什么不能做什么？',a:'中断要<b>快进快出</b>：<br>✅ 能做：设标志位、清中断标志、往队列放数据(FreeRTOS)、操作少量寄存器<br>❌ 不能做：printf(阻塞)、HAL_Delay(依赖SysTick)、复杂计算、操作I2C/SPI等慢外设<br>原则：中断只做"通知"，具体处理放主循环或任务里。FreeRTOS里中断调用带FromISR后缀的函数。'}
+];
+function renderInterview(){
+  const cats=[...new Set(INTERVIEW_QA.map(q=>q.cat))];
+  let html='';
+  cats.forEach(cat=>{
+    html+=`<div class="hal-sec"><h2 class="hal-h">${cat}</h2>`;
+    INTERVIEW_QA.filter(q=>q.cat===cat).forEach((q,idx)=>{
+      const id='iv'+cat.replace(/\W/g,'')+idx;
+      html+=`<div class="iv-q" onclick="document.getElementById('${id}').classList.toggle('show')">
+        <div class="iv-qt">Q: ${q.q}</div>
+        <div class="iv-ans" id="${id}"><b>A:</b> ${q.a}</div>
+      </div>`;
+    });
+    html+=`</div>`;
+  });
+  document.getElementById('interviewBody').innerHTML=html;
+}
+
+/* ========== 模块驱动速查 ========== */
+const MODULES_CONTENT=`
+<div class="hal-sec">
+  <h2 class="hal-h">显示模块</h2>
+  <h3>OLED 0.96寸 (I2C, SSD1306, 128x64)</h3>
+  <pre>接线：VCC→3.3V  GND→GND  SCL→PB8  SDA→PB9
+地址：0x78 (写) / 0x79 (读)，7位地址0x3C</pre>
+  <pre><code>// 初始化
+OLED_Init();
+// 显示字符串
+OLED_ShowString(0,0,"Hello");
+OLED_ShowNum(0,2,123,3);
+// 清屏
+OLED_Clear();
+// 刷新（有些驱动需要）
+OLED_Refresh();</code></pre>
+  <div class="reg-note">📌 底层：I2C发送命令/数据到SSD1306控制器。课程第9章I2C。</div>
+</div>
+
+<div class="hal-sec">
+  <h2 class="hal-h">温湿度传感器</h2>
+  <h3>DHT11 (单总线)</h3>
+  <pre>接线：VCC→5V  GND→GND  DATA→PB11（加4.7k上拉到VCC）</pre>
+  <pre><code>DHT11_Data_t dht;
+if(DHT11_Read(&dht)==0){
+    printf("温度:%d 湿度:%d\\n", dht.temp, dht.humi);
+}else{
+    printf("读取失败\\n");
+}</code></pre>
+  <div class="reg-note">📌 时序：主机拉低18ms起始→DHT11响应→40字节数据(湿度整/小数+温度整/小数+校验)。</div>
+
+  <h3>DS18B20 (单总线, 温度)</h3>
+  <pre>接线：VCC→3.3V  GND→GND  DQ→PA0（加4.7k上拉）</pre>
+  <pre><code>DS18B20_Start();       // 启动转换
+HAL_Delay(750);         // 等待转换
+float t = DS18B20_ReadTemp();  // 读温度(℃)</code></pre>
+</div>
+
+<div class="hal-sec">
+  <h2 class="hal-h">运动传感器</h2>
+  <h3>MPU6050 (I2C, 六轴加速度+陀螺仪)</h3>
+  <pre>接线：VCC→3.3V  GND→GND  SCL→PB8  SDA→PB9
+地址：0xD0 (写)，7位地址0x68（AD0接GND）</pre>
+  <pre><code>MPU6050_Init();
+int16_t ax,ay,az,gx,gy,gz;
+MPU6050_GetData(&ax,&ay,&az,&gx,&gy,&gz);
+printf("ax=%d ay=%d az=%d\\n",ax,ay,az);
+printf("gx=%d gy=%d gz=%d\\n",gx,gy,gz);</code></pre>
+  <div class="reg-note">📌 加速度量程±2g/±4g/±8g/±16g，陀螺仪±250~±2000°/s，通过配置寄存器选择。</div>
+</div>
+
+<div class="hal-sec">
+  <h2 class="hal-h">光照传感器</h2>
+  <h3>BH1750 (I2C, 数字光照)</h3>
+  <pre>接线：VCC→3.3V  GND→GND  SCL→PB8  SDA→PB9
+地址：0x46 (ADDR=GND) / 0xB8 (ADDR=VCC)</pre>
+  <pre><code>BH1750_Init();
+uint16_t lux = BH1750_Read();   // 单位lux
+printf("光照: %d lux\\n", lux);</code></pre>
+  <h3>光敏电阻 (模拟, ADC)</h3>
+  <pre>接线：VCC→电阻→ADC引脚→光敏电阻→GND（分压）
+ADC引脚如PA0</pre>
+  <pre><code>uint32_t val = Read_ADC(ADC_CHANNEL_0);
+// val 0~4095对应0~3.3V，换算成光照
+float v = val * 3.3 / 4096;</code></pre>
+</div>
+
+<div class="hal-sec">
+  <h2 class="hal-h">通信模块</h2>
+  <h3>ESP8266 WiFi (USART)</h3>
+  <pre>接线：VCC→3.3V(注意电流要够)  GND→GND  TXD→PA10(RX)  RXD→PA9(TX)
+波特率：115200 (出厂默认9600，可用AT+UART改)</pre>
+  <pre><code>// AT指令模式
+printf("AT+RST\\r\\n");              // 复位
+printf("AT+CWMODE=1\\r\\n");        // STA模式
+printf("AT+CWJAP=\"ssid\",\"pwd\"\\r\\n"); // 连WiFi
+printf("AT+CIPSTART=\"TCP\",\"ip\",80\\r\\n"); // 连服务器
+printf("AT+CIPSEND=5\\r\\nHello"); // 发5字节</code></pre>
+  <div class="reg-note">📌 ESP8266启动电流大(300mA)，3.3V供电要足，否则会反复重启。建议加100uF电容。</div>
+
+  <h3>HC-05 蓝牙 (USART)</h3>
+  <pre>接线：VCC→5V  GND→GND  TXD→PA10  RXD→PA9
+波特率：9600 (HC-05默认)</pre>
+  <pre><code>// 直接透传，和串口一样用
+HAL_UART_Transmit(&huart1, "hello", 5, 100);
+uint8_t rx;
+HAL_UART_Receive(&huart1, &rx, 1, 100);</code></pre>
+</div>
+
+<div class="hal-sec">
+  <h2 class="hal-h">电机驱动</h2>
+  <h3>L298N 直流电机驱动</h3>
+  <pre>接线：
+  IN1→PB0  IN2→PB1  (控制方向)
+  ENA→TIM2_CH1 PA0 (PWM调速)
+  OUT1/OUT2接电机，12V供电接VM，5V给VCC</pre>
+  <pre><code>// 正转
+HAL_GPIO_WritePin(GPIOB,GPIO_PIN_0,GPIO_PIN_SET);
+HAL_GPIO_WritePin(GPIOB,GPIO_PIN_1,GPIO_PIN_RESET);
+// PWM调速 0~100%
+__HAL_TIM_SET_COMPARE(&htim2,TIM_CHANNEL_1, 500); // 50%
+// 停止
+HAL_GPIO_WritePin(GPIOB,GPIO_PIN_0,GPIO_PIN_RESET);
+HAL_GPIO_WritePin(GPIOB,GPIO_PIN_1,GPIO_PIN_RESET);</code></pre>
+  <div class="reg-note">📌 PWM频率建议10~20kHz(人耳听不到)，占空比0~ARR对应0~100%转速。</div>
+</div>
+`;
+function renderModules(){
+  document.getElementById('modulesBody').innerHTML=MODULES_CONTENT;
+}
+
 function goHome(){showPage('page-home');renderChapters();document.getElementById('searchInput').value='';document.getElementById('searchResult').innerHTML='';}
 function backFromLesson(){showPage('page-chapter');}
 
@@ -4637,6 +4872,8 @@ function prevCard(){cardFlipped=false;cardIdx=(cardIdx-1+CARDS.length)%CARDS.len
    代码模拟器 - 简化C解释器
    ============================================================ */
 let simVars={}, simGPIO={MODER:0,ODR:0}, simOutEl, simCodeEl;
+let simPorts={A:{IDR:0,ODR:0},B:{IDR:0,ODR:0},C:{IDR:0,ODR:0},D:{IDR:0,ODR:0},E:{IDR:0,ODR:0}};
+let simKeyPressed=false, simADCVal=0;
 let simStop=false, simRunBtn;
 let simFuncs={};      // 用户自定义函数 name -> {params:[], start, end}
 let simRetVal=0, simReturning=false, simBreaking=false;
@@ -4864,6 +5101,82 @@ bitop:`int main(void){
   // 清位：把第3位变0
   c = c & ~(1 << 3);
   printf("清位后c = 0x%x\\n", c);
+}`,
+uart:`int main(void){
+  printf("串口发送示例\\n");
+  uart_send("AT+RST");          // 发送AT指令
+  delay_ms(500);
+  uart_send("AT+CWMODE=1");     // STA模式
+  delay_ms(500);
+
+  // 循环发送传感器数据
+  int i;
+  for(i=0; i<5; i++){
+    int temp = 25 + i;
+    char buf[32];
+    sprintf(buf, "temp=%d", temp);   // 格式化字符串
+    uart_send(buf);
+    delay_ms(300);
+  }
+  printf("发送完成\\n");
+}`,
+adc:`int main(void){
+  printf("ADC采集示例\\n");
+  printf("模拟读取PA0的ADC值(0~4095)\\n\\n");
+
+  int i;
+  for(i=0; i<8; i++){
+    int val = analogRead(0);      // 读ADC通道0
+    printf("ADC[%d] = %d\\n", i, val);
+
+    // 换算成电压: val * 3.3 / 4096
+    // (模拟器里用整数近似)
+    int mv = val * 3300 / 4096;   // 毫伏
+    printf("电压 = %d mV\\n", mv);
+
+    // 判断光照
+    if(val > 3000){
+      printf(" -> 光照强\\n");
+    } else {
+      printf(" -> 光照弱\\n");
+    }
+    delay_ms(200);
+  }
+}`,
+pwm:`int main(void){
+  printf("PWM呼吸灯示例\\n");
+  printf("占空比从0到1000再回到0\\n\\n");
+
+  int duty;
+  // 渐亮
+  for(duty=0; duty<=1000; duty+=50){
+    pwm_write(duty);              // 设置PWM占空比
+    delay_ms(30);
+  }
+  printf("最亮\\n");
+
+  // 渐灭
+  for(duty=1000; duty>=0; duty-=50){
+    pwm_write(duty);
+    delay_ms(30);
+  }
+  printf("熄灭\\n");
+}`,
+key:`int main(void){
+  printf("按键检测示例\\n");
+  printf("点击下方\"模拟按键按下\"按钮触发\\n\\n");
+
+  int count = 0;
+  while(1){
+    if(button_pressed()){         // 检测按键是否按下
+      count++;
+      printf("按键按下! 次数=%d\\n", count);
+
+      // 按下时翻转LED (PE5)
+      GPIOE->ODR ^= 0x20;
+    }
+    delay_ms(100);
+  }
 }`
 };
 
@@ -4875,11 +5188,15 @@ function loadEx(name){
 function clearSim(){document.getElementById('simOut').innerHTML='<span class="sys">// 输出区已清空</span>';}
 function resetSimHW(){
   simGPIO={MODER:0,ODR:0};
+  simPorts={A:{IDR:0,ODR:0},B:{IDR:0,ODR:0},C:{IDR:0,ODR:0},D:{IDR:0,ODR:0},E:{IDR:0,ODR:0}};
+  simKeyPressed=false; simADCVal=0;
   document.getElementById('led1').classList.remove('on');
   document.getElementById('led2').classList.remove('on');
   document.getElementById('rMODER').textContent='0x'+simGPIO.MODER.toString(16).padStart(8,'0');
   document.getElementById('rODR').textContent='0x'+simGPIO.ODR.toString(16).padStart(8,'0');
+  document.getElementById('simVars').innerHTML='<span class="sys">运行时变量会显示在这里</span>';
 }
+function simPressKey(){ simKeyPressed=true; simPrint('🔘 按键按下\n','sys'); }
 function updateLEDs(){
   // DS1=PE5: ODR bit5==0 -> 亮; DS2=PE6: bit6==0 -> 亮
   const ds1 = (simGPIO.ODR & 0x20)===0;
@@ -4896,7 +5213,25 @@ function simPrint(txt, cls){
   simOutEl.appendChild(span);
   simOutEl.scrollTop=simOutEl.scrollHeight;
 }
-function simSleep(ms){return new Promise(r=>setTimeout(r,Math.min(ms,1000)));}
+function simSleep(ms){
+  const spd=parseFloat(document.getElementById('simSpeed')?.value||'1');
+  const real=Math.min(ms/spd, 1000);
+  return new Promise(r=>setTimeout(r,real));
+}
+function updateSimVars(){
+  const el=document.getElementById('simVars');
+  if(!el)return;
+  const keys=Object.keys(simVars);
+  if(keys.length===0){el.innerHTML='<span class="sys">暂无变量</span>';return;}
+  el.innerHTML=keys.map(k=>{
+    let v=simVars[k];
+    let s;
+    if(Array.isArray(v)) s='['+v.map(x=>typeof x==='object'?'&ptr':x).join(',')+']';
+    else if(typeof v==='object'&&v!==null&&v.__ptr!==undefined) s='→'+v.__ptr+'['+v.__idx+']';
+    else s=String(v);
+    return `<span class="sim-var">${k}=${s}</span>`;
+  }).join(' ');
+}
 
 // ---- tokenizer ----
 function simTokenize(src){
@@ -5028,10 +5363,11 @@ async function parsePrimary(tk,p){
 }
 
 function readReg(port, reg){
-  if(port==='GPIOE'){
-    if(reg==='ODR') return simGPIO.ODR;
-    if(reg==='MODER') return simGPIO.MODER;
-    if(reg==='IDR') return simGPIO.ODR;
+  const letter=port.replace('GPIO','');
+  if(simPorts[letter]){
+    if(reg==='ODR') return simPorts[letter].ODR;
+    if(reg==='IDR') return simPorts[letter].IDR;
+    if(reg==='MODER') return letter==='E'?simGPIO.MODER:0;
     if(reg==='BSRR') return 0;
   }
   if(port==='RCC'&&reg==='AHB1ENR') return 0x10;
@@ -5040,6 +5376,49 @@ function readReg(port, reg){
 async function callFunc(name, args){
   if(name==='printf'){ simPrintf(args); return 0; }
   if(name==='delay_ms'){ return 0; } // handled specially in exec
+  // 外设模拟函数
+  if(name==='digitalRead'){
+    const pin=args[0]|0;
+    return simKeyPressed?0:1;  // PA0: 按下=0(低电平), 松开=1
+  }
+  if(name==='analogRead'){
+    // 模拟ADC，返回0~4095的变化值（模拟传感器）
+    simADCVal=(simADCVal+37)%4096;
+    return simADCVal;
+  }
+  if(name==='uart_send'){
+    let s=args[0]; if(typeof s!=='string') s=String(s);
+    simPrint('[UART TX] '+s+'\n','uart');
+    return 0;
+  }
+  if(name==='pwm_write'){
+    const duty=args[0]|0;
+    simPrint('[PWM] duty='+duty+'\n','pwm');
+    return 0;
+  }
+  if(name==='button_pressed'){
+    const p=simKeyPressed; simKeyPressed=false; return p?1:0;
+  }
+  if(name==='sprintf'){
+    // sprintf(buf, fmt, ...)  格式化到buf
+    let fmt=args[1]; if(typeof fmt!=='string') fmt=String(fmt);
+    let ai=2, out='';
+    for(let i=0;i<fmt.length;i++){
+      if(fmt[i]==='%'&&i+1<fmt.length){
+        const f=fmt[i+1]; i++;
+        if(f==='d'||f==='i') out+=(args[ai++]|0);
+        else if(f==='x') out+=(args[ai++]>>>0).toString(16);
+        else if(f==='c') out+=String.fromCharCode(args[ai++]|0);
+        else if(f==='s') out+=args[ai++];
+        else if(f==='%') out+='%';
+        else out+='%'+f;
+      } else out+=fmt[i];
+    }
+    if(args[0]&&typeof args[0]==='object'&&args[0].__ptr!==undefined){
+      simVars[args[0].__ptr]=out;  // 把数组变量存成字符串
+    }
+    return out.length;
+  }
   // user-defined function
   const fn=simFuncs[name];
   if(fn){
@@ -5378,15 +5757,16 @@ async function execExprStmt(tk,p){
 }
 
 function writeReg(port, reg, val){
-  if(port==='GPIOE'){
-    if(reg==='ODR'){simGPIO.ODR=val>>>0;updateLEDs();}
-    else if(reg==='MODER'){simGPIO.MODER=val>>>0;updateLEDs();}
+  const letter=port.replace('GPIO','');
+  if(simPorts[letter]){
+    if(reg==='ODR'){simPorts[letter].ODR=val>>>0; if(letter==='E'){simGPIO.ODR=simPorts.E.ODR;updateLEDs();}}
+    else if(reg==='MODER'){if(letter==='E'){simGPIO.MODER=val>>>0;updateLEDs();}}
     else if(reg==='BSRR'){
       val=val>>>0;
-      simGPIO.ODR|=(val&0xFFFF);
-      simGPIO.ODR&=~((val>>>16)&0xFFFF);
-      simGPIO.ODR=simGPIO.ODR>>>0;
-      updateLEDs();
+      simPorts[letter].ODR|=(val&0xFFFF);
+      simPorts[letter].ODR&=~((val>>>16)&0xFFFF);
+      simPorts[letter].ODR=simPorts[letter].ODR>>>0;
+      if(letter==='E'){simGPIO.ODR=simPorts.E.ODR;updateLEDs();}
     }
   }
 }
@@ -5417,6 +5797,7 @@ async function execBlock(tk,p){
   while(p.i<tk.length&&!(tk[p.i].t==='pun'&&tk[p.i].v==='}')){
     if(simStop||simReturning||simBreaking) return;
     await execStmt(tk,p);
+    updateSimVars();
   }
 }
 
