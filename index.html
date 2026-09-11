@@ -3892,13 +3892,13 @@ function renderChapters(){
     const chTotal=ch.lessons.length;
     if(chDone===chTotal)doneCount+=chDone;
     const pct=chTotal?Math.round(chDone/chTotal*100):0;
-    const unlocked=ci===0||CHAPTERS[ci-1].lessons.every(l=>st.done[l.id]);
+    const unlocked=true;
     const div=document.createElement('div');
-    div.className='chapter-item'+(unlocked?'':' locked');
-    div.innerHTML=`<div class="ico" style="background:hsl(${ci*22},70%,92%)">${unlocked?ch.ico:'🔒'}</div>
+    div.className='chapter-item';
+    div.innerHTML=`<div class="ico" style="background:hsl(${ci*22},70%,92%)">${ch.ico}</div>
       <div class="info"><div class="ttl">${ch.title}</div><div class="desc">${ch.desc}</div><div class="pbar" style="width:60%"><span style="width:${pct}%"></span></div></div>
       <div class="prog">${chDone}/${chTotal}</div>`;
-    if(unlocked)div.onclick=()=>openChapter(ci);
+    div.onclick=()=>openChapter(ci);
     box.appendChild(div);
   });
   const doneLs=Object.keys(st.done).length;
