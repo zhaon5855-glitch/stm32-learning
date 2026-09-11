@@ -9,7 +9,8 @@
 <title>STM32移动课堂</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-:root{--bg:#f5f6f8;--card:#fff;--pri:#2563eb;--pri2:#1d4ed8;--ok:#16a34a;--warn:#f59e0b;--err:#dc2626;--txt:#1e293b;--sub:#64748b;--line:#e2e8f0;--code-bg:#0f172a;--code-tx:#e2e8f0}
+:root{--bg:#f5f6f8;--card:#fff;--pri:#2563eb;--pri2:#1d4ed8;--ok:#16a34a;--warn:#f59e0b;--err:#dc2626;--txt:#1e293b;--sub:#64748b;--line:#e2e8f0;--code-bg:#0f172a;--code-tx:#e2e8f0;--hero1:#2563eb;--hero2:#7c3aed}
+body.dark{--bg:#0f172a;--card:#1e293b;--txt:#e2e8f0;--sub:#94a3b8;--line:#334155;--code-bg:#020617;--hero1:#1e3a8a;--hero2:#4c1d95}
 html,body{height:100%}
 body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--txt);font-size:15px;line-height:1.6;overflow-x:hidden}
 #app{max-width:540px;margin:0 auto;min-height:100vh;padding-bottom:64px;background:var(--bg)}
@@ -29,7 +30,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
 .card p{color:#334155;margin:6px 0}
 
 /* home */
-.hero{background:linear-gradient(135deg,#2563eb,#7c3aed);color:#fff;padding:20px 16px 28px}
+.hero{background:linear-gradient(135deg,var(--hero1),var(--hero2));color:#fff;padding:20px 16px 28px}
 .hero h2{font-size:22px;margin-bottom:4px}
 .hero .sub{opacity:.85;font-size:13px}
 .stat-row{display:flex;gap:10px;margin:-18px 12px 12px}
@@ -118,6 +119,43 @@ table th{background:#f1f5f9}
 /* scrollable lists */
 .scroll{overflow-y:auto}
 
+/* search */
+.search-box{padding:10px 12px;background:var(--card);margin:12px;border-radius:10px;display:flex;align-items:center;gap:8px;border:1px solid var(--line)}
+.search-box input{flex:1;border:none;background:transparent;font-size:14px;color:var(--txt);outline:none}
+.search-result{margin:8px 12px}
+
+/* notes */
+.note-area{width:100%;min-height:80px;border:1.5px solid var(--line);border-radius:8px;padding:10px;font-size:14px;font-family:inherit;resize:vertical;background:var(--card);color:var(--txt)}
+.note-saved{font-size:12px;color:var(--ok);margin-top:4px}
+
+/* check-in */
+.checkin-btn{background:linear-gradient(135deg,#f59e0b,#ef4444);color:#fff;border:none;border-radius:10px;padding:14px;font-size:15px;font-weight:600;width:100%;cursor:pointer;margin:8px 0}
+.checkin-btn.done{background:var(--ok)}
+.streak{font-size:12px;color:var(--sub);text-align:center;margin-top:4px}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-top:8px}
+.cal-day{aspect-ratio:1;border-radius:6px;background:var(--line);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--sub)}
+.cal-day.done{background:var(--ok);color:#fff}
+.cal-day.today{border:2px solid var(--pri)}
+
+/* flashcards */
+.flash-card{background:var(--card);border-radius:14px;padding:24px 16px;margin:12px;min-height:180px;display:flex;flex-direction:column;justify-content:center;text-align:center;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.1);transition:transform .2s}
+.flash-card:active{transform:scale(.97)}
+.flash-card .ftag{font-size:12px;color:var(--pri);margin-bottom:10px}
+.flash-card .ftext{font-size:17px;font-weight:600;line-height:1.5}
+.flash-card .fback{font-size:14px;color:var(--sub);margin-top:8px;line-height:1.6}
+.flash-ctrl{display:flex;gap:10px;padding:0 12px}
+
+/* dark toggle */
+.theme-toggle{position:fixed;top:12px;right:16px;z-index:60;width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.2);border:none;color:#fff;font-size:18px;cursor:pointer}
+body.dark .theme-toggle{background:rgba(255,255,255,.1)}
+
+/* report bar */
+.rbar{display:flex;align-items:center;gap:8px;margin:6px 0}
+.rbar .lbl{width:70px;font-size:12px;color:var(--sub)}
+.rbar .track{flex:1;height:14px;background:var(--line);border-radius:7px;overflow:hidden}
+.rbar .track span{display:block;height:100%;background:var(--pri);border-radius:7px}
+.rbar .val{font-size:12px;width:40px;text-align:right}
+
 /* modal */
 .modal-mask{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;display:none;align-items:center;justify-content:center;padding:20px}
 .modal-mask.show{display:flex}
@@ -126,6 +164,7 @@ table th{background:#f1f5f9}
 </style>
 </head>
 <body>
+<button class="theme-toggle" onclick="toggleTheme()" title="切换深色模式">🌙</button>
 <div id="app">
 
 <!-- HOME -->
@@ -140,6 +179,10 @@ table th{background:#f1f5f9}
     <div class="stat-box"><div class="num" id="stQ">0</div><div class="lbl">已做题</div></div>
     <div class="stat-box"><div class="num" id="stRate">0%</div><div class="lbl">正确率</div></div>
   </div>
+  <div class="search-box">
+    🔍 <input id="searchInput" placeholder="搜索知识点，如 BSRR、for循环、串口..." oninput="doSearch()">
+  </div>
+  <div id="searchResult"></div>
   <div class="card" id="contCard" style="cursor:pointer" onclick="continueLearn()">
     <h3>📖 继续学习</h3>
     <p id="contText">点击开始第一课</p>
@@ -205,8 +248,22 @@ table th{background:#f1f5f9}
     <div class="stat-box"><div class="num" id="mDay">0</div><div class="lbl">打卡天数</div></div>
     <div class="stat-box"><div class="num" id="mFav">0</div><div class="lbl">收藏课程</div></div>
   </div>
+  <div class="card">
+    <h3>📅 每日打卡</h3>
+    <button class="checkin-btn" id="checkinBtn" onclick="doCheckin()">今日打卡</button>
+    <div class="streak" id="streakText">连续打卡 0 天 🔥</div>
+    <div class="cal-grid" id="calGrid"></div>
+  </div>
+  <div class="card">
+    <h3>📊 学习报告</h3>
+    <div id="reportBox"></div>
+  </div>
+  <div class="card" onclick="showPage('page-cards')">
+    <h3>🎴 知识卡片</h3>
+    <p>翻面卡片，碎片时间快速复习关键点</p>
+  </div>
   <div class="card" onclick="showPage('page-prac')">
-    <h3>📊 做题统计</h3>
+    <h3>✏️ 做题统计</h3>
     <p>查看总做题数、正确率、错题本</p>
   </div>
   <div class="card" onclick="exportWrong()">
@@ -221,6 +278,17 @@ table th{background:#f1f5f9}
     <h3>🗑️ 清空所有数据</h3>
     <p>章节进度、做题记录、错题、收藏全部清空</p>
   </div>
+</div>
+
+<!-- FLASHCARDS -->
+<div class="page" id="page-cards">
+  <div class="topbar"><span class="back" onclick="showPage('page-me')">‹</span><h1>知识卡片</h1></div>
+  <div id="cardContent"></div>
+  <div class="flash-ctrl">
+    <button class="btn ghost" style="flex:1" onclick="prevCard()">‹ 上一张</button>
+    <button class="btn" style="flex:1" onclick="nextCard()">下一张 ›</button>
+  </div>
+  <p style="text-align:center;color:var(--sub);font-size:12px;margin:8px">点击卡片翻面</p>
 </div>
 
 </div>
@@ -620,189 +688,507 @@ GPIOE->PUPDR |= (2 << (n*2));   // 下拉</code></pre>
 ]},
 /* ===== 第7章 外部中断 ===== */
 {id:7,ico:'⚡',title:'第7章 外部中断EXTI',desc:'中断概念、NVIC、按键中断',lessons:[
- {id:'7-1',title:'7.1 中断是什么',kp:['中断=暂停当前活，先处理紧急事件','EXTI是外部中断，引脚电平变化触发','比轮询省CPU：不用一直盯着按键'],content:`
+ {id:'7-1',title:'7.1 中断是什么',kp:['中断=暂停当前活，先处理紧急事件','EXTI是外部中断，引脚电平变化触发','比轮询省CPU：不用一直盯着按键','中断服务函数必须快进快出'],content:`
 <h3>中断的生活比喻</h3>
-<p>你在看书（主循环），突然电话响了（中断触发），你放下书去接电话（中断服务函数），接完回来继续看书（恢复主循环）。这就是中断。</p>
-<p>按键轮询是"每隔一会儿看一眼按键"，浪费CPU；按键中断是"按键变化时自动通知你"，高效。</p>
+<p>你在家看书（<b>主循环</b>），突然电话响了（<b>中断触发</b>），你放下书去接电话（<b>中断服务函数</b>），接完回来继续看书（<b>恢复主循环</b>）。这就是中断。</p>
+<h3>轮询 vs 中断</h3>
+<table>
+<tr><th>方式</th><th>做法</th><th>缺点</th></tr>
+<tr><td>轮询</td><td>while循环里每隔一会儿查一次按键</td><td>CPU一直盯着，干不了别的</td></tr>
+<tr><td>中断</td><td>按键变化时硬件自动通知CPU</td><td>配置稍复杂</td></tr>
+</table>
+<p>好比你等快递：轮询=每隔1分钟去门口看一眼；中断=快递到了给你打电话。</p>
+<div class="kp"><b>中断服务函数的规矩：</b>要<b>快进快出</b>，别在里面写大循环或延时。复杂逻辑设个标志位，回到主循环处理。</div>
 `},
- {id:'7-2',title:'7.2 EXTI配置步骤',kp:['SYSCFG选引脚源','EXTI设触发沿（上升/下降/双边）','NVIC使能中断并设优先级','写中断服务函数EXTI[x]_IRQHandler'],content:`
-<h3>配置外部中断4步</h3>
+ {id:'7-2',title:'7.2 EXTI外部中断配置',kp:['SYSCFG选引脚源','EXTI设触发沿（上升/下降/双边）','NVIC使能中断并设优先级','写中断服务函数EXTI[x]_IRQHandler','必须清挂起位EXTI->PR'],content:`
+<h3>EXTI是什么</h3>
+<p>EXTI（External Interrupt）= 外部中断控制器。每个EXTI线对应一个引脚号（EXTI0对应所有端口的Pin0），通过SYSCFG选择具体哪个端口。</p>
+<h3>配置4步</h3>
 <ol>
-<li>SYSCFG_EXTICR：选哪个引脚连到EXTI线</li>
-<li>EXTI_RTSR/FTSR：选上升沿/下降沿触发</li>
-<li>EXTI_IMR：使能该中断线</li>
-<li>NVIC：使能中断通道+设优先级</li>
+<li><b>开时钟</b>：RCC使能SYSCFG和GPIO</li>
+<li><b>SYSCFG选源</b>：<code>SYSCFG->EXTICR[0] |= SYSCFG_EXTICR1_EXTI0_PA</code> 选PA0连到EXTI0</li>
+<li><b>EXTI设触发沿</b>：RTSR上升沿 / FTSR下降沿 / 两个都开=双边沿</li>
+<li><b>NVIC使能</b>：<code>NVIC_EnableIRQ(EXTI0_IRQn)</code> + 设优先级</li>
 </ol>
-<p>中断服务函数名固定：<code>EXTI0_IRQHandler</code>~<code>EXTI15_10_IRQHandler</code>，在里面清标志位+做处理。</p>
-<div class="warn-box">⚠️ 中断函数里必须清挂起位 <code>EXTI->PR |= (1<<n)</code>，否则会一直进中断。</div>
+<h3>中断服务函数</h3>
+<pre><code>void EXTI0_IRQHandler(void)
+{
+    if(EXTI->PR & (1<<0))        // 确认是EXTI0触发的
+    {
+        EXTI->PR |= (1<<0);      // 清挂起位（必须！）
+        // 在这里做处理，比如翻转LED
+        GPIOE->ODR ^= (1<<5);
+    }
+}</code></pre>
+<div class="warn-box">⚠️ <b>不清挂起位会怎样？</b>中断一直触发，CPU卡死在中断函数里出不来。清挂起位是写1清除：<code>EXTI->PR |= (1<<n)</code>。</div>
+<h3>中断服务函数名是固定的</h3>
+<table>
+<tr><th>EXTI线</th><th>函数名</th></tr>
+<tr><td>0</td><td>EXTI0_IRQHandler</td></tr>
+<tr><td>1</td><td>EXTI1_IRQHandler</td></tr>
+<tr><td>2</td><td>EXTI2_IRQHandler</td></tr>
+<tr><td>3</td><td>EXTI3_IRQHandler</td></tr>
+<tr><td>4</td><td>EXTI4_IRQHandler</td></tr>
+<tr><td>5~9</td><td>EXTI9_5_IRQHandler</td></tr>
+<tr><td>10~15</td><td>EXTI15_10_IRQHandler</td></tr>
+</table>
+`},
+ {id:'7-3',title:'7.3 NVIC与中断优先级',kp:['NVIC是嵌套向量中断控制器','优先级数字越小越高','抢占优先级高的可以打断低的','同优先级按先来后到'],content:`
+<h3>NVIC是什么</h3>
+<p>NVIC（Nested Vectored Interrupt Controller）= 嵌套向量中断控制器，专门管中断的"排队"。</p>
+<h3>优先级</h3>
+<p>STM32优先级分两部分：<b>抢占优先级</b>和<b>子优先级</b>。</p>
+<ul>
+<li><b>抢占优先级</b>高的中断，可以打断正在执行的低优先级中断（嵌套）</li>
+<li>抢占优先级相同，看<b>子优先级</b>，高的先执行</li>
+<li>都相同，按中断编号顺序</li>
+</ul>
+<div class="kp"><b>记忆：</b>优先级数值越小，级别越高。0是最高。</div>
+<pre><code>NVIC_SetPriority(EXTI0_IRQn, 1);  // 设优先级为1
+NVIC_EnableIRQ(EXTI0_IRQn);       // 使能中断</code></pre>
 `}
 ]},
 /* ===== 第8章 串口 ===== */
 {id:8,ico:'📡',title:'第8章 串口通信USART',desc:'最常用的调试手段',lessons:[
  {id:'8-1',title:'8.1 串口基础',kp:['串口=两根线(TX/RX)全双工通信','波特率=每秒传多少位，常用9600/115200','TX发RX收，交叉接线：TX接对方RX','USB转TTL模块连接电脑'],content:`
 <h3>串口是什么</h3>
-<p>串口(UART/USART)是单片机和外界通信最常用的方式，就2根数据线：TX(发)和RX(收)，加上GND共3根。</p>
+<p>串口(UART/USART)是单片机和外界通信最常用的方式，就2根数据线：<b>TX(发)</b>和<b>RX(收)</b>，加上GND共3根。</p>
 <ul>
-<li><b>全双工</b>：发和收能同时进行</li>
-<li><b>波特率</b>：通信速度，双方必须一致，常用115200</li>
-<li><b>接线交叉</b>：板子TX接模块RX，板子RX接模块TX</li>
+<li><b>全双工</b>：发和收能同时进行（一边说一边听）</li>
+<li><b>波特率</b>：通信速度=每秒传多少位，双方必须一致，常用115200</li>
+<li><b>接线交叉</b>：板子TX接模块RX，板子RX接模块TX（我的嘴对对方的耳朵）</li>
 </ul>
-<div class="warn-box">⚠️ 你的板子Micro USB直连PA11/PA12（USB），没有USB转串口芯片，所以串口课需要额外买<b>USB转TTL模块</b>（CH340/CP2102）。</div>
+<h3>数据帧格式</h3>
+<p>串口传一个字节（8位）的格式：</p>
+<pre>起始位(0) + 8位数据 + 停止位(1) = 10位</pre>
+<p>波特率115200的意思：每秒传115200位，约11520字节/秒。</p>
+<div class="warn-box">⚠️ 你的板子Micro USB直连PA11/PA12（USB），没有USB转串口芯片，所以串口课需要额外买<b>USB转TTL模块</b>（CH340/CP2102，几块钱）。</div>
 `},
- {id:'8-2',title:'8.2 printf重定向',kp:['重写fputc函数把printf输出到串口','这样就能用printf调试','微库MicroLIB要勾选'],content:`
-<h3>让printf从串口输出</h3>
-<p>单片机没有屏幕，printf默认没地方输出。重写一个函数把printf的字符转发到串口：</p>
+ {id:'8-2',title:'8.2 串口配置与printf重定向',kp:['开USART时钟+GPIO时钟','GPIO配复用推挽输出','设波特率USART_BRR','使能发送/接收/USART','重写fputc让printf走串口'],content:`
+<h3>串口配置步骤</h3>
+<ol>
+<li>开时钟：<code>RCC->APB2ENR |= (1<<4)</code> 开USART1</li>
+<li>GPIO配复用：TX脚设为复用推挽输出</li>
+<li>设波特率：<code>USART1->BRR = 84000000/115200</code>（APB2时钟84MHz）</li>
+<li>使能：<code>USART1->CR1 |= (1<<13)|(1<<3)|(1<<2)</code> 开USART+发送+接收</li>
+</ol>
+<h3>printf重定向</h3>
+<p>单片机没屏幕，printf默认没地方输出。重写fputc把字符转发到串口：</p>
 <pre><code>int fputc(int ch, FILE *f)
 {
-    while(!(USART1->SR & (1<<7)));  // 等发送寄存器空
+    while(!(USART1->SR & (1<<7)));  // 等发送寄存器空(TXE=1)
     USART1->DR = ch;                // 发一个字节
     return ch;
 }</code></pre>
 <p>然后就能用 <code>printf("温度=%d\\n", temp);</code> 从串口助手看输出了。</p>
-<div class="tip">💡 Keil里要勾选 Options→Target→Use MicroLIB，printf才能用。</div>
+<div class="tip">💡 Keil里必须勾 Options→Target→<b>Use MicroLIB</b>，否则printf用不了。</div>
 `},
- {id:'8-3',title:'8.3 串口收发指令控制LED',kp:['收到数据触发USART中断','解析收到的字符执行动作','如收到字符1亮灯、字符0灭灯'],content:`
-<h3>串口控制LED</h3>
-<p>在串口接收中断里判断收到的字节：</p>
-<pre><code>void USART1_IRQHandler()
+ {id:'8-3',title:'8.3 串口接收中断控制LED',kp:['开接收中断USART_CR1_RXNEIE','收到数据触发USART中断','在中断里读DR并解析','如收到1亮灯、0灭灯'],content:`
+<h3>串口接收中断</h3>
+<p>开启接收中断后，每收到一个字节就进中断，不用轮询查：</p>
+<pre><code>// 开接收中断
+USART1->CR1 |= (1<<5);        // RXNEIE=1
+NVIC_EnableIRQ(USART1_IRQn);  // NVIC使能
+
+// 中断服务函数
+void USART1_IRQHandler()
 {
-    if(USART1->SR & (1<<5))   // 收到数据
+    if(USART1->SR & (1<<5))   // RXNE=1，收到数据
     {
-        char c = USART1->DR;
+        char c = USART1->DR;  // 读DR自动清标志
         if(c == '1') GPIOE->BSRR = (1 << (5+16));  // 亮
         if(c == '0') GPIOE->BSRR = (1 << 5);       // 灭
     }
 }</code></pre>
+<div class="kp"><b>注意：</b>读<code>USART1->DR</code>会自动清除接收标志，不用手动清。</div>
 `}
 ]},
 /* ===== 第9章 I2C ===== */
 {id:9,ico:'🔗',title:'第9章 I2C总线',desc:'OLED屏、传感器常用',lessons:[
- {id:'9-1',title:'9.1 I2C基础',kp:['I2C=2根线(SCL时钟+SDA数据)','半双工，支持一主多从','每个从设备有地址','SCL高电平时SDA下降沿=起始信号'],content:`
+ {id:'9-1',title:'9.1 I2C基础',kp:['I2C=2根线(SCL时钟+SDA数据)','半双工，支持一主多从','每个从设备有7位地址','SCL高电平时SDA下降沿=起始信号','SCL高电平时SDA上升沿=停止信号'],content:`
 <h3>I2C是什么</h3>
-<p>I2C只用2根线就能挂很多设备（OLED、温湿度传感器、EEPROM等），适合板内通信。</p>
+<p>I2C（Inter-Integrated Circuit）只用<b>2根线</b>就能挂很多设备（OLED、温湿度传感器、EEPROM等），适合板内通信。</p>
 <ul>
-<li><b>SCL</b>：时钟线，由主机产生</li>
-<li><b>SDA</b>：数据线，双向</li>
+<li><b>SCL</b>：时钟线，由主机产生，所有设备共享</li>
+<li><b>SDA</b>：数据线，双向，所有设备共享</li>
+<li><b>上拉电阻</b>：两根线各接一个4.7K上拉电阻到3.3V（开漏输出必须有）</li>
 <li><b>地址</b>：每个从设备有7位地址，主机先发送地址选中目标</li>
 </ul>
+<h3>I2C通信时序</h3>
+<table>
+<tr><th>信号</th><th>条件</th><th>含义</th></tr>
+<tr><td>起始</td><td>SCL高电平时，SDA从高变低</td><td>开始通信</td></tr>
+<tr><td>停止</td><td>SCL高电平时，SDA从低变高</td><td>结束通信</td></tr>
+<tr><td>应答</td><td>SCL第9个脉冲时SDA为低</td><td>从机说"收到了"</td></tr>
+</table>
+<div class="kp"><b>记忆：</b>I2C是"SCL高时动SDA才算数"。起始=下降沿，停止=上升沿。</div>
 `},
- {id:'9-2',title:'9.2 I2C驱动OLED',kp:['OLED常见地址0x78','发送命令0x00，发送数据0x40','显存是一页一页写的'],content:`
-<h3>OLED显示</h3>
-<p>0.96寸OLED(128×64)用I2C驱动，常见地址0x78。写入时先发0x00表示命令、0x40表示显示数据。</p>
-<p>典型流程：初始化→清屏→设置光标位置→发送要显示的字模数据。</p>
+ {id:'9-2',title:'9.2 I2C驱动OLED',kp:['OLED常见写地址0x78','先发0x00表示后面是命令','先发0x40表示后面是显示数据','显存按页(8行)写，每页128列'],content:`
+<h3>OLED屏</h3>
+<p>0.96寸OLED(128×64)用I2C驱动，常见写地址<b>0x78</b>（读地址0x79）。</p>
+<h3>发送数据格式</h3>
+<pre>起始 + 0x78(地址) + 控制字节 + 数据 + 停止</pre>
+<ul>
+<li>控制字节 = <code>0x00</code>：后面是<b>命令</b>（如清屏、设置光标）</li>
+<li>控制字节 = <code>0x40</code>：后面是<b>显示数据</b>（字模）</li>
+</ul>
+<h3>显示流程</h3>
+<ol>
+<li>发初始化命令序列</li>
+<li>清屏</li>
+<li>设置页地址(0~7)和列地址(0~127)</li>
+<li>发送8个字节的字模数据（1页=8行高）</li>
+</ol>
+<div class="tip">💡 OLED的64行分成8页，每页8行。写一个字节就是同一列的8个像素。</div>
 `}
 ]},
 /* ===== 第10章 SPI ===== */
 {id:10,ico:'🚀',title:'第10章 SPI总线',desc:'高速通信，Flash/TFT屏',lessons:[
- {id:'10-1',title:'10.1 SPI基础',kp:['SPI=4根线(SCK/MOSI/MISO/CS)','全双工，比I2C快','一主多从靠CS片选','时钟极性CPOL/相位CPHA要匹配'],content:`
+ {id:'10-1',title:'10.1 SPI基础',kp:['SPI=4根线(SCK/MOSI/MISO/CS)','全双工，比I2C快很多','一主多从靠CS片选','CPOL/CPHA四种模式要匹配'],content:`
 <h3>SPI是什么</h3>
-<p>SPI是高速同步串行总线，4根线：SCK(时钟)、MOSI(主出从入)、MISO(主入从出)、CS(片选)。比I2C快很多，适合TFT屏、Flash、ADC等高速设备。</p>
+<p>SPI（Serial Peripheral Interface）是高速同步串行总线，4根线：</p>
+<table>
+<tr><th>线</th><th>全称</th><th>方向</th></tr>
+<tr><td>SCK</td><td>时钟</td><td>主机→从机</td></tr>
+<tr><td>MOSI</td><td>主出从入</td><td>主机→从机</td></tr>
+<tr><td>MISO</td><td>主入从出</td><td>从机→主机</td></tr>
+<tr><td>CS</td><td>片选</td><td>主机→从机</td></tr>
+</table>
+<p>比I2C快很多（可达几十MHz），适合TFT屏、Flash、高速ADC。</p>
+<h3>CPOL和CPHA</h3>
+<p>SPI有4种模式，由CPOL(时钟极性)和CPHA(时钟相位)决定：</p>
+<ul>
+<li><b>CPOL=0</b>：空闲时SCK低电平</li>
+<li><b>CPOL=1</b>：空闲时SCK高电平</li>
+<li><b>CPHA=0</b>：第一个边沿采样</li>
+<li><b>CPHA=1</b>：第二个边沿采样</li>
+</ul>
+<div class="warn-box">⚠️ 主机和从机的CPOL/CPHA必须一致，否则通信乱码。</div>
 `},
- {id:'10-2',title:'10.2 SPI读写W25Qxx Flash',kp:['W25Q64=64Mbit SPI Flash','发命令+地址+数据','读ID命令0x9F','扇区擦除0x20，页编程0x02'],content:`
-<h3>SPI Flash</h3>
-<p>W25Qxx系列是常见SPI Flash，存字库、参数、日志。操作流程：拉低CS→发命令→发地址→读写数据→拉高CS。</p>
+ {id:'10-2',title:'10.2 SPI读写W25Qxx Flash',kp:['W25Q64=64Mbit(8MB) SPI Flash','流程：拉低CS→发命令→地址→数据→拉高CS','读ID命令0x9F','扇区擦除0x20，页编程0x02，读数据0x03'],content:`
+<h3>SPI Flash操作</h3>
+<p>W25Qxx是常见SPI Flash，存字库、参数、日志。操作都是"拉低CS→发数据→拉高CS"的格式。</p>
+<h3>常用命令</h3>
+<table>
+<tr><th>命令</th><th>功能</th></tr>
+<tr><td>0x9F</td><td>读厂家/设备ID</td></tr>
+<tr><td>0x03</td><td>读数据（后跟3字节地址）</td></tr>
+<tr><td>0x20</td><td>扇区擦除（4KB，必须先擦才能写）</td></tr>
+<tr><td>0x02</td><td>页编程（写256字节）</td></tr>
+<tr><td>0x05</td><td>读状态寄存器（看忙不忙）</td></tr>
+</table>
+<div class="kp"><b>铁律：</b>Flash写之前必须先擦除！Flash只能把1写成0，不能把0写成1，擦除把整块变成全1。</div>
 `}
 ]},
 /* ===== 第11章 定时器 ===== */
 {id:11,ico:'⏱️',title:'第11章 定时器',desc:'精准延时、定时中断',lessons:[
- {id:'11-1',title:'11.1 SysTick系统滴答定时器',kp:['Cortex-M内核自带的24位倒计时器','配好后能精确延时微秒/毫秒','SysTick_Config(时钟频率/1000)=1ms中断'],content:`
-<h3>SysTick精准延时</h3>
-<p>告别空转Delay！SysTick是内核自带定时器，系统时钟168MHz时：</p>
-<pre><code>SysTick_Config(168000000 / 1000);  // 1ms中断一次
-// 全局变量ms计数，延时函数等ms到目标值</code></pre>
+ {id:'11-1',title:'11.1 SysTick系统滴答定时器',kp:['Cortex-M内核自带的24位倒计时器','SysTick_Config(N)=每N个时钟中断一次','168MHz时SysTick_Config(168000)=1ms','告别空转Delay，实现精准延时'],content:`
+<h3>SysTick是什么</h3>
+<p>SysTick是Cortex-M内核自带的<b>24位倒计时定时器</b>，所有STM32都有，专门用来做系统时基。</p>
+<h3>配置</h3>
+<pre><code>SysTick_Config(168000000 / 1000);  // 168MHz时钟，每1ms中断一次</code></pre>
+<p>参数=时钟频率÷期望频率。168MHz÷1000=168000，即每168000个时钟中断一次=1ms。</p>
+<h3>精准延时</h3>
+<pre><code>volatile uint32_t g_ms = 0;
+void SysTick_Handler(void){ g_ms++; }   // 每1ms加1
+
+void delay_ms(uint32_t ms)
+{
+    uint32_t start = g_ms;
+    while(g_ms - start < ms);           // 等到ms过去
+}</code></pre>
+<div class="kp"><b>对比：</b>之前的Delay(5000000)是空转猜时间，现在delay_ms(500)是精准500毫秒。</div>
 `},
- {id:'11-2',title:'11.2 通用定时器TIM',kp:['TIM2~TIM5是32位通用定时器','PSC预分频+ARR自动重装载','更新事件触发中断','定时时间=(PSC+1)*(ARR+1)/时钟'],content:`
-<h3>定时器定时公式</h3>
-<p>定时时间 = (PSC+1) × (ARR+1) ÷ 定时器时钟频率</p>
-<p>比如168MHz，想定时1秒：PSC=16799（分到10kHz），ARR=9999（10000次=1秒）。</p>
+ {id:'11-2',title:'11.2 通用定时器TIM',kp:['TIM2~TIM5是32位通用定时器','定时时间=(PSC+1)×(ARR+1)÷时钟','PSC预分频：把时钟变慢','ARR自动重装载：数到ARR就溢出触发中断'],content:`
+<h3>定时器的两个关键寄存器</h3>
+<ul>
+<li><b>PSC（预分频器）</b>：把输入时钟分频。PSC=83，84MHz→1MHz</li>
+<li><b>ARR（自动重装载值）</b>：计数器数到ARR就归零溢出。ARR=999，1MHz→1kHz</li>
+</ul>
+<h3>定时公式</h3>
+<pre>定时时间 = (PSC + 1) × (ARR + 1) ÷ 定时器时钟</pre>
+<p>例子：定时器时钟84MHz，想定时1秒：</p>
+<pre>PSC=8399 → 84MHz÷(8399+1)=10kHz
+ARR=9999 → 10kHz÷(9999+1)=1Hz → 1秒</pre>
+<h3>定时中断</h3>
+<pre><code>TIM2->PSC = 8399;
+TIM2->ARR = 9999;
+TIM2->DIER |= 1;          // 开更新中断
+TIM2->CR1 |= 1;           // 启动定时器
+NVIC_EnableIRQ(TIM2_IRQn);
+
+void TIM2_IRQHandler(){
+    if(TIM2->SR & 1){
+        TIM2->SR = 0;     // 清标志
+        // 每秒做一次
+    }
+}</code></pre>
 `}
 ]},
 /* ===== 第12章 PWM ===== */
 {id:12,ico:'🌊',title:'第12章 PWM脉宽调制',desc:'呼吸灯、舵机、电机调速',lessons:[
- {id:'12-1',title:'12.1 PWM原理',kp:['PWM=周期固定、占空比变化的方波','占空比=高电平时间/周期','占空比决定平均电压→LED亮度/电机转速'],content:`
+ {id:'12-1',title:'12.1 PWM原理',kp:['PWM=周期固定、占空比变化的方波','占空比=高电平时间÷总周期','占空比决定平均电压','用于LED亮度、电机转速、舵机角度'],content:`
 <h3>PWM是什么</h3>
-<p>PWM就是快速开关，开关的比例(占空比)决定输出平均效果。占空比50%的方波加到LED上，人眼看到的是半亮。</p>
+<p>PWM（Pulse Width Modulation）就是<b>快速开关</b>，开关的比例(占空比)决定输出平均效果。</p>
+<table>
+<tr><th>占空比</th><th>平均电压(3.3V)</th><th>LED亮度</th></tr>
+<tr><td>0%</td><td>0V</td><td>灭</td></tr>
+<tr><td>25%</td><td>0.825V</td><td>暗</td></tr>
+<tr><td>50%</td><td>1.65V</td><td>半亮</td></tr>
+<tr><td>100%</td><td>3.3V</td><td>最亮</td></tr>
+</table>
+<div class="kp"><b>原理：</b>LED的余晖效应+人眼视觉暂留，快速开关看到的是平均亮度。频率要高于100Hz才看不闪。</div>
 `},
- {id:'12-2',title:'12.2 定时器输出PWM',kp:['TIMx_CHx引脚输出PWM','CCR寄存器决定占空比','ARR决定频率','呼吸灯：CCR从0加到ARR再减回'],content:`
-<h3>呼吸灯</h3>
-<p>用定时器的PWM模式，让CCR值从0慢慢增到ARR（灯渐亮），再减回0（灯渐灭），循环就是呼吸灯效果。</p>
+ {id:'12-2',title:'12.2 定时器输出PWM',kp:['ARR决定PWM频率','CCR寄存器决定占空比','占空比=CCR÷(ARR+1)','呼吸灯：CCR从0加到ARR再减回0'],content:`
+<h3>定时器PWM模式</h3>
+<p>定时器的通道引脚可以输出PWM波：</p>
+<ul>
+<li><b>ARR</b> 决定频率：频率 = 时钟÷(PSC+1)÷(ARR+1)</li>
+<li><b>CCR</b> 决定占空比：占空比 = CCR÷(ARR+1)</li>
+</ul>
+<h3>呼吸灯实现</h3>
+<pre><code>// PWM频率1kHz，占空比可变
+TIM3->ARR = 999;        // 1000级
+TIM3->CCR1 = 0;         // 初始占空比0
+
+// 在循环里改变CCR1
+for(int d=0; d<=999; d++){ TIM3->CCR1 = d; delay_ms(1); }  // 渐亮
+for(int d=999; d>=0; d--){ TIM3->CCR1 = d; delay_ms(1); } // 渐灭</code></pre>
+<div class="tip">💡 舵机控制：50Hz PWM，占空比0.5ms~2.5ms对应0°~180°。电机调速：改变PWM占空比就改变平均电压→转速。</div>
 `}
 ]},
 /* ===== 第13章 ADC ===== */
 {id:13,ico:'📈',title:'第13章 ADC模数转换',desc:'读模拟电压',lessons:[
- {id:'13-1',title:'13.1 ADC基础',kp:['ADC把模拟电压转成数字量','F407是12位ADC，值0~4095对应0~3.3V','转换值=电压/3.3*4095'],content:`
+ {id:'13-1',title:'13.1 ADC基础',kp:['ADC把模拟电压转成数字量','F407是12位ADC，值0~4095对应0~3.3V','电压=ADC值×3.3÷4095','可测电位器、光敏、电池电压'],content:`
 <h3>ADC是什么</h3>
-<p>单片机只能处理数字(0/1)，但传感器输出的是模拟电压（比如电位器0~3.3V连续变化）。ADC把模拟电压转成数字。</p>
-<p>12位ADC：0V→0，3.3V→4095，线性对应。读电位器电压= <code>ADC值 * 3.3 / 4095</code>。</p>
+<p>单片机只能处理数字(0/1)，但传感器输出的是<b>模拟电压</b>（电位器0~3.3V连续变化）。ADC（Analog to Digital Converter）把模拟电压转成数字。</p>
+<h3>12位ADC的含义</h3>
+<p>12位 = 2<sup>12</sup> = 4096个等级，把0~3.3V分成4096份：</p>
+<ul>
+<li>0V → 0</li>
+<li>1.65V → 2048</li>
+<li>3.3V → 4095</li>
+</ul>
+<pre>电压 = ADC值 × 3.3 ÷ 4095</pre>
+<h3>常用测量</h3>
+<ul>
+<li><b>电位器</b>：旋钮角度→电压变化→ADC读取</li>
+<li><b>光敏电阻</b>：光线亮暗→电阻变化→电压变化</li>
+<li><b>电池电压</b>：通过分压电阻测电池电量</li>
+</ul>
 `},
- {id:'13-2',title:'13.2 DMA搬运ADC数据',kp:['DMA=直接内存访问，不用CPU参与','ADC+DMA可以连续采样多通道','不占用CPU，适合高速采集'],content:`
-<h3>DMA</h3>
-<p>DMA是"搬运工"，能把ADC数据自动搬到内存，CPU不用管。ADC+DMA可以同时扫多个通道，CPU该干嘛干嘛。</p>
+ {id:'13-2',title:'13.2 DMA搬运ADC数据',kp:['DMA=直接内存访问，不占用CPU','ADC+DMA连续采样多通道','DMA自动把ADC数据搬到数组','适合高速、多通道采集'],content:`
+<h3>为什么需要DMA</h3>
+<p>不用DMA时，每次ADC转换完要CPU手动去读数据搬内存。如果多通道高速采集，CPU光搬数据就累死了。</p>
+<p>DMA（Direct Memory Access）是个<b>搬运工</b>，ADC转换完自动把数据搬到指定内存，CPU完全不用参与。</p>
+<h3>ADC+DMA多通道</h3>
+<pre><code>uint16_t adc_buf[3];   // 存3个通道的值
+
+// ADC配置3个通道，DMA循环模式
+ADC->SQR1 = 2;         // 3个转换
+ADC->SQR3 = ch0|(ch1<<5)|(ch2<<10);
+DMA把数据自动存到adc_buf[0..2]</code></pre>
+<div class="kp"><b>效果：</b>CPU该干嘛干嘛，DMA默默把多个通道的ADC值填进数组，你直接读数组就行。</div>
 `}
 ]},
 /* ===== 第14章 综合项目 ===== */
 {id:14,ico:'🏗️',title:'第14章 综合项目',desc:'把所学串起来',lessons:[
- {id:'14-1',title:'14.1 温湿度采集显示',kp:['DHT11单总线读温湿度','OLED显示数值','串口打印调试'],content:`
-<h3>项目：环境监测</h3>
-<p>DHT11温湿度传感器→单片机读数据→OLED显示+串口打印。涉及GPIO(单总线时序)、I2C(OLED)、USART(printf)。</p>
+ {id:'14-1',title:'14.1 温湿度采集显示',kp:['DHT11单总线协议：起始+响应+40位数据','OLED显示温湿度数值','串口printf打印调试','综合应用GPIO+I2C+USART'],content:`
+<h3>项目：环境监测仪</h3>
+<p>把DHT11温湿度传感器的数据读出来，显示在OLED上，同时通过串口打印到电脑。</p>
+<h3>DHT11单总线协议</h3>
+<p>DHT11用一根数据线通信，时序如下：</p>
+<ol>
+<li>主机拉低总线18ms以上（起始信号）</li>
+<li>主机释放，DHT11拉低80us响应</li>
+<li>DHT11拉高80us准备发数据</li>
+<li>发送40位数据：湿度整数+湿度小数+温度整数+温度小数+校验和</li>
+</ol>
+<pre><code>// 每位数据：50us低电平 + 高电平长度
+// 高电平26~28us = 0，70us = 1</code></pre>
+<h3>整体框架</h3>
+<pre><code>while(1)
+{
+    DHT11_Read(&temp, &humi);   // 读温湿度
+    OLED_ShowNum(0,0,temp,2);   // OLED显示
+    printf("温度:%d 湿度:%d\\n", temp, humi);  // 串口打印
+    delay_ms(2000);              // DHT11最快2秒读一次
+}</code></pre>
+<div class="kp"><b>涉及知识点：</b>GPIO(单总线时序) + I2C(OLED) + USART(printf) + SysTick(精准延时)。</div>
 `},
- {id:'14-2',title:'14.2 继电器远程开关',kp:['继电器=用小电流控制大电流','GPIO控制继电器线圈','可以控制220V家电'],content:`
-<h3>项目：远程开关</h3>
-<p>单片机GPIO控制继电器模块，继电器另一端接220V电器。配合WiFi模块就能手机远程控制。注意强电安全！</p>
+ {id:'14-2',title:'14.2 继电器远程开关',kp:['继电器=用小电流控制大电流的电磁开关','GPIO输出控制继电器线圈(3.3V/5V)','常开NO/常闭NC/公共COM三端','可以控制220V家电，注意强电安全'],content:`
+<h3>继电器是什么</h3>
+<p>继电器是个<b>电磁开关</b>：线圈通电产生磁性，吸合触点，控制另一路电路通断。用单片机的3.3V小电流就能控制220V大电流。</p>
+<h3>继电器模块接线</h3>
+<table>
+<tr><th>模块端</th><th>接单片机</th></tr>
+<tr><td>VCC</td><td>5V或3.3V</td></tr>
+<tr><td>GND</td><td>GND</td></tr>
+<tr><td>IN</td><td>GPIO引脚（输出）</td></tr>
+</table>
+<h3>控制代码</h3>
+<pre><code>// IN输出低电平吸合（低电平触发的继电器模块）
+GPIOE->BSRR = (1 << (5+16));   // 继电器吸合，电器通电
+GPIOE->BSRR = (1 << 5);        // 继电器断开，电器断电</code></pre>
+<div class="warn-box">⚠️ <b>强电危险！</b>接220V时务必断电操作，接线要牢固，最好加保险丝。新手建议先控制3.3V/5V的小灯练手。</div>
 `},
- {id:'14-3',title:'14.3 WiFi上云(ESP8266)',kp:['ESP8266通过AT指令联网','单片机串口发AT指令','连接WiFi→连接服务器→收发数据'],content:`
-<h3>项目：物联网</h3>
-<p>ESP8266 WiFi模块用AT指令操作，单片机通过串口发AT指令让它连WiFi、连云服务器，实现手机远程看数据、遥控设备。</p>
+ {id:'14-3',title:'14.3 WiFi上云(ESP8266)',kp:['ESP8266通过AT指令操作','单片机串口发AT指令控制','流程：连WiFi→连服务器→收发数据','实现手机远程看数据、遥控设备'],content:`
+<h3>ESP8266 WiFi模块</h3>
+<p>ESP8266是自带WiFi的模块，单片机通过串口发<b>AT指令</b>控制它联网。</p>
+<h3>常用AT指令</h3>
+<table>
+<tr><th>指令</th><th>功能</th></tr>
+<tr><td>AT</td><td>测试模块是否正常</td></tr>
+<tr><td>AT+CWMODE=1</td><td>设为STA模式</td></tr>
+<tr><td>AT+CWJAP="WiFi名","密码"</td><td>连接WiFi</td></tr>
+<tr><td>AT+CIPSTART="TCP","IP",端口</td><td>连接服务器</td></tr>
+<tr><td>AT+CIPSEND=长度</td><td>发送数据</td></tr>
+</table>
+<h3>单片机代码框架</h3>
+<pre><code>printf("AT+CWJAP=\\"MyWiFi\\",\\"12345678\\"\\r\\n");
+delay_ms(2000);
+printf("AT+CIPSTART=\\"TCP\\",\\"192.168.1.100\\",8080\\r\\n");
+// 连上后就能收发数据了</code></pre>
+<div class="kp"><b>效果：</b>手机APP连同一个服务器，就能看传感器数据、远程控制继电器——这就是最简单的物联网。</div>
 `}
 ]},
 /* ===== 第15章 FreeRTOS ===== */
 {id:15,ico:'🌀',title:'第15章 FreeRTOS实时系统',desc:'多任务并发',lessons:[
- {id:'15-1',title:'15.1 为什么需要RTOS',kp:['裸机while(1)只能顺序执行','多任务：采集/显示/通信同时跑','FreeRTOS是最流行的嵌入式RTOS'],content:`
+ {id:'15-1',title:'15.1 为什么需要RTOS',kp:['裸机while(1)只能顺序执行','一个任务卡住，其他全停','RTOS让多任务快速切换，看似同时运行','FreeRTOS是最流行的免费嵌入式RTOS'],content:`
 <h3>裸机的痛点</h3>
-<p>裸机程序是一个大while(1)，所有任务排队执行。如果显示任务卡住了，采集就停了。RTOS让多个任务"同时"运行（其实是快速切换），互不阻塞。</p>
+<p>裸机程序是一个大while(1)，所有任务排队执行：</p>
+<pre><code>while(1){
+    读传感器();   // 如果这个卡住
+    显示();       // 显示就停了
+    通信();       // 通信也停了
+}</code></pre>
+<p>如果读传感器卡住（等数据），显示和通信全停。</p>
+<h3>RTOS的解法</h3>
+<p>RTOS（Real-Time Operating System）让多个任务"<b>同时</b>"运行，其实是CPU在任务间快速切换（几毫秒换一次），人感觉是同时的。</p>
+<div class="kp"><b>FreeRTOS</b>：免费、开源、占资源小（几KB RAM），是嵌入式最流行的RTOS。</div>
 `},
- {id:'15-2',title:'15.2 任务创建与调度',kp:['xTaskCreate创建任务','vTaskStartScheduler启动调度','任务是死循环函数','优先级高的先执行'],content:`
+ {id:'15-2',title:'15.2 任务创建与调度',kp:['xTaskCreate创建任务','vTaskStartScheduler启动调度器','任务是死循环函数，内部必须有阻塞','优先级高的先执行，同优先级轮流'],content:`
 <h3>创建任务</h3>
-<pre><code>xTaskCreate(led_task, "led", 128, NULL, 2, NULL);
-xTaskCreate(adc_task, "adc", 128, NULL, 3, NULL);
-vTaskStartScheduler();</code></pre>
-<p>每个任务是一个死循环函数，调度器按优先级切换。</p>
+<pre><code>// 任务函数（死循环）
+void led_task(void *pv)
+{
+    while(1){
+        LED_Toggle();
+        vTaskDelay(500);   // 阻塞500ms，让CPU跑别的任务
+    }
+}
+
+int main()
+{
+    xTaskCreate(led_task, "led", 128, NULL, 2, NULL);
+    xTaskCreate(adc_task, "adc", 128, NULL, 3, NULL);
+    vTaskStartScheduler();   // 启动调度器
+}</code></pre>
+<h3>任务参数</h3>
+<table>
+<tr><th>参数</th><th>含义</th></tr>
+<tr><td>led_task</td><td>任务函数名</td></tr>
+<tr><td>"led"</td><td>任务名（调试用）</td></tr>
+<tr><td>128</td><td>栈大小（字，128×4=512字节）</td></tr>
+<tr><td>NULL</td><td>传给任务的参数</td></tr>
+<tr><td>2</td><td>优先级（数字越大越优先）</td></tr>
+<tr><td>NULL</td><td>任务句柄</td></tr>
+</table>
+<div class="warn-box">⚠️ 任务里必须有<b>阻塞</b>（vTaskDelay等），否则高优先级任务会一直占着CPU，低优先级饿死。</div>
 `},
- {id:'15-3',title:'15.3 队列/信号量/互斥锁',kp:['队列：任务间传数据','信号量：任务同步/计数','互斥锁：保护共享资源'],content:`
-<h3>任务间通信</h3>
-<ul>
-<li><b>队列Queue</b>：ADC任务把数据塞进队列，显示任务从队列取</li>
-<li><b>信号量Semaphore</b>：按键中断给信号量，任务等到信号量才执行</li>
-<li><b>互斥锁Mutex</b>：两个任务都要用串口，拿锁才能用，用完释放</li>
-</ul>
+ {id:'15-3',title:'15.3 队列/信号量/互斥锁',kp:['队列Queue：任务间安全传数据','信号量Semaphore：任务同步/计数','互斥锁Mutex：保护共享资源不被同时访问','任务间通信不靠全局变量'],content:`
+<h3>三大通信机制</h3>
+<table>
+<tr><th>机制</th><th>用途</th><th>例子</th></tr>
+<tr><td>队列Queue</td><td>任务间传数据</td><td>ADC任务把温度值塞进队列，显示任务取出来显示</td></tr>
+<tr><td>信号量Semaphore</td><td>任务同步</td><td>按键中断释放信号量，任务等到信号量才执行</td></tr>
+<tr><td>互斥锁Mutex</td><td>保护共享资源</td><td>两个任务都要发串口，拿锁才能用，用完释放</td></tr>
+</table>
+<h3>队列示例</h3>
+<pre><code>QueueHandle_t q;  // 队列句柄
+
+// 创建队列，能存5个int
+q = xQueueCreate(5, sizeof(int));
+
+// ADC任务：放数据
+int temp = 25;
+xQueueSend(q, &temp, 100);
+
+// 显示任务：取数据
+int val;
+xQueueReceive(q, &val, portMAX_DELAY);  // 没数据就阻塞等</code></pre>
+<div class="kp"><b>为什么不用全局变量？</b>多任务同时读写全局变量会"打架"（数据被改一半被另一个读），队列和互斥锁能保证安全。</div>
 `}
 ]},
 /* ===== 第16章 工程规范 ===== */
 {id:16,ico:'📐',title:'第16章 软件工程规范',desc:'让代码可维护',lessons:[
- {id:'16-1',title:'16.1 代码分层',kp:['硬件驱动层bsp/','功能模块层app/','主逻辑main','驱动不要掺业务逻辑'],content:`
-<h3>分层思想</h3>
-<p>把代码分三层：bsp(驱动硬件)、app(业务逻辑)、main(主流程)。改硬件只动bsp，改功能只动app，互不干扰。</p>
+ {id:'16-1',title:'16.1 代码分层',kp:['硬件驱动层bsp/：只操作寄存器','功能模块层app/：业务逻辑','主逻辑main/：调用各模块','改硬件只动bsp，改功能只动app'],content:`
+<h3>为什么要分层</h3>
+<p>把所有代码写在main.c里，小项目还行，大了就乱成一锅粥。分层让代码像搭积木，换积木不影响整体。</p>
+<h3>三层结构</h3>
+<table>
+<tr><th>层</th><th>文件夹</th><th>职责</th><th>例子</th></tr>
+<tr><td>驱动层</td><td>bsp/</td><td>直接操作寄存器</td><td>led.c、key.c、usart.c</td></tr>
+<tr><td>模块层</td><td>app/</td><td>业务逻辑，调用驱动</td><td>环境监测、遥控器</td></tr>
+<tr><td>主逻辑</td><td>main.c</td><td>初始化+调度</td><td>调用各模块</td></tr>
+</table>
+<div class="kp"><b>好处：</b>换板子只改bsp层；换产品只改app层；驱动可以复用到其他项目。</div>
 `},
- {id:'16-2',title:'16.2 状态机编程',kp:['复杂逻辑用switch-case状态机','每个状态做一件事，满足条件跳下一状态','避免多层if嵌套'],content:`
-<h3>状态机</h3>
-<p>比如自动售货机：投币→选货→出货→找零，每个状态是一个case，事件触发跳转。比一堆if-else清晰。</p>
+ {id:'16-2',title:'16.2 状态机编程',kp:['复杂逻辑用switch-case状态机','每个状态做一件事','事件触发状态跳转','避免层层if嵌套，逻辑清晰'],content:`
+<h3>什么是状态机</h3>
+<p>状态机=把复杂流程拆成多个<b>状态</b>，每个状态只做一件事，满足条件就跳到下一个状态。</p>
+<h3>例子：自动售货机</h3>
+<pre><code>enum { IDLE, COIN, SELECT, OUT, CHANGE } state = IDLE;
+
+while(1)
+{
+    switch(state)
+    {
+        case IDLE:   if(投币) state = COIN; break;
+        case COIN:   if(选货) state = SELECT; break;
+        case SELECT: 出货; state = OUT; break;
+        case OUT:    找零; state = CHANGE; break;
+        case CHANGE: state = IDLE; break;
+    }
+}</code></pre>
+<div class="kp"><b>对比：</b>不用状态机要写一堆if(投币 && !选货 && ...)嵌套，改一个条件要到处改。状态机每个case独立，好改好读。</div>
 `}
 ]},
 /* ===== 第17章 PCB ===== */
 {id:17,ico:'🖨️',title:'第17章 PCB设计',desc:'画自己的板子',lessons:[
- {id:'17-1',title:'17.1 立创EDA入门',kp:['立创EDA免费国产PCB设计软件','流程：原理图→封装→布局→布线→打样','原理图决定电路连接，PCB决定物理布局'],content:`
-<h3>PCB设计流程</h3>
+ {id:'17-1',title:'17.1 立创EDA入门',kp:['立创EDA免费国产PCB设计软件','流程：原理图→封装→布局→布线→打样','原理图决定电路连接，PCB决定物理布局','DRC检查无误才能打样'],content:`
+<h3>PCB设计全流程</h3>
 <ol>
-<li>画原理图（元件和连接关系）</li>
-<li>给每个元件分配封装（实际尺寸）</li>
-<li>PCB布局（元件摆位置）</li>
-<li>布线（连线）</li>
-<li>DRC检查→导出Gerber→打样</li>
+<li><b>画原理图</b>：放元件符号、连线，表达电路逻辑</li>
+<li><b>分配封装</b>：每个元件对应实际尺寸（0805电阻、LQFP100芯片等）</li>
+<li><b>导入PCB</b>：把原理图的连接关系导入PCB编辑器</li>
+<li><b>布局</b>：把元件摆到板子上，考虑信号流向、散热、接口位置</li>
+<li><b>布线</b>：用铜箔把该连的连起来</li>
+<li><b>DRC检查</b>：自动检查有没有短路、间距不够等问题</li>
+<li><b>导出Gerber</b>：发给厂家打样</li>
 </ol>
+<div class="tip">💡 立创EDA（嘉立创）是国产免费软件，自带元件库，打样也便宜（5块板5元起），新手首选。</div>
 `},
- {id:'17-2',title:'17.2 画STM32最小系统',kp:['最小系统=芯片+电源+晶振+复位+下载口','电源去耦电容每个电源脚一个','晶振靠近芯片，走线短','SWD下载口保留'],content:`
-<h3>最小系统电路</h3>
-<p>STM32能跑起来的最少电路：芯片、3.3V电源、8MHz晶振、复位电路、SWD下载口。每个电源引脚旁放0.1uF去耦电容。</p>
+ {id:'17-2',title:'17.2 画STM32最小系统',kp:['最小系统=芯片+电源+晶振+复位+下载口','电源去耦电容每个电源脚一个0.1uF','8MHz晶振靠近芯片，走线短','SWD下载口必须保留','BOOT0接GND正常从Flash启动'],content:`
+<h3>STM32最小系统电路</h3>
+<p>让STM32能跑起来的最少电路：</p>
+<table>
+<tr><th>部分</th><th>元件</th><th>要点</th></tr>
+<tr><td>电源</td><td>3.3V LDO + 去耦电容</td><td>每个VDD脚旁放0.1uF，VBAT脚接电池或3.3V</td></tr>
+<tr><td>晶振</td><td>8MHz无源晶振 + 2个22pF电容</td><td>紧贴芯片OSC_IN/OUT脚，走线短</td></tr>
+<tr><td>复位</td><td>10K上拉 + 0.1uF电容 + 按键</td><td>低电平复位，按键按下接地</td></tr>
+<tr><td>启动</td><td>BOOT0接10K下拉到GND</td><td>BOOT0=0从Flash启动（正常运行）</td></tr>
+<tr><td>下载</td><td>SWD接口4针：SWDIO/SWCLK/GND/3.3V</td><td>必须留，否则没法烧程序</td></tr>
+</table>
+<div class="warn-box">⚠️ <b>去耦电容是命根子：</b>每个电源脚必须有0.1uF去耦电容，紧贴引脚。没有的话芯片可能跑不稳、死机、ADC不准。</div>
+<h3>布局要点</h3>
+<ul>
+<li>晶振和电容紧贴芯片，走线尽量短粗</li>
+<li>去耦电容紧贴对应电源脚</li>
+<li>电源入口放个10uF或更大的电解电容滤波</li>
+<li>BOOT0默认下拉到GND，需要时用跳帽接3.3V</li>
+</ul>
+<div class="kp"><b>毕业作品：</b>画一块自己的STM32控制板，打样回来自己焊，用ST-LINK烧入点灯程序——这是嵌入式学习的里程碑！</div>
 `}
 ]}
 ];
@@ -955,6 +1341,9 @@ function openLesson(ci,li){
     html+=`<div class="lesson-quiz"><h3>本节练习（${qs.length}题）</h3><p>学完做几道检验一下 👇</p>
       <button class="btn block" onclick="startChapterQuiz(${l.id.split('-')[0]})">开始练习</button></div>`;
   }
+  html+=`<h3 style="margin-top:20px">📝 我的笔记</h3>
+    <textarea class="note-area" id="noteArea" placeholder="在这里写下你的理解、疑问、心得..." oninput="saveNote('${l.id}')">${LS.get('m_note_'+l.id,'')||''}</textarea>
+    <div class="note-saved" id="noteTip" style="display:none">✓ 已自动保存</div>`;
   html+=`<button class="btn ghost block" onclick="markDone('${l.id}')">${st.done[l.id]?'✓ 已标记完成（点击取消）':'标记本课已学 ✓'}</button>`;
   document.getElementById('lessonContent').innerHTML=html;
   showPage('page-lesson');
@@ -1156,7 +1545,7 @@ function updateStats(){
   const totalLs=CHAPTERS.reduce((s,c)=>s+c.lessons.length,0);
   const doneLs=Object.keys(st.done).length;
   document.getElementById('mCh').textContent=Math.round(doneLs/totalLs*100)+'%';
-  document.getElementById('mDay').textContent='0';
+  document.getElementById('mDay').textContent=LS.get('m_checkin',[]).length;
   document.getElementById('mFav').textContent=st.fav.length;
 }
 
@@ -1186,15 +1575,141 @@ function showPage(id){
   document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.page===id));
   window.scrollTo(0,0);
   if(id==='page-prac'){renderPracChapters();updateStats();}
-  if(id==='page-me')updateStats();
+  if(id==='page-me'){updateStats();renderCheckin();renderReport();}
+  if(id==='page-cards')showCard();
 }
 
-function goHome(){showPage('page-home');renderChapters();}
+function goHome(){showPage('page-home');renderChapters();document.getElementById('searchInput').value='';document.getElementById('searchResult').innerHTML='';}
 function backFromLesson(){showPage('page-chapter');}
+
+/* ========== 深色模式 ========== */
+function toggleTheme(){
+  document.body.classList.toggle('dark');
+  const isDark=document.body.classList.contains('dark');
+  localStorage.setItem('m_theme',isDark?'dark':'light');
+  document.querySelector('.theme-toggle').textContent=isDark?'☀️':'🌙';
+}
+if(LS.get('m_theme','light')==='dark'){document.body.classList.add('dark');document.querySelector('.theme-toggle').textContent='☀️';}
+
+/* ========== 搜索 ========== */
+function doSearch(){
+  const kw=document.getElementById('searchInput').value.trim().toLowerCase();
+  const box=document.getElementById('searchResult');
+  if(!kw){box.innerHTML='';return;}
+  let html='';
+  CHAPTERS.forEach((ch,ci)=>{
+    ch.lessons.forEach((l,li)=>{
+      const text=(ch.title+l.title+l.content+(l.kp||[]).join('')).toLowerCase();
+      if(text.includes(kw)){
+        html+=`<div class="chapter-item" onclick="openLesson(${ci},${li})">
+          <div class="ico" style="background:#fef3c7;font-size:16px">🔍</div>
+          <div class="info"><div class="ttl">${l.title}</div><div class="desc">${ch.title}</div></div>
+          <div class="prog">›</div></div>`;
+      }
+    });
+  });
+  box.innerHTML=html?`<div class="section-title">搜索结果</div>${html}`:'<div class="empty"><div class="ic">😅</div>没找到相关内容</div>';
+}
+
+/* ========== 笔记 ========== */
+function saveNote(id){
+  const v=document.getElementById('noteArea').value;
+  LS.set('m_note_'+id,v);
+  const tip=document.getElementById('noteTip');
+  tip.style.display='block';
+  clearTimeout(window._noteT);
+  window._noteT=setTimeout(()=>tip.style.display='none',1500);
+}
+
+/* ========== 打卡 ========== */
+function doCheckin(){
+  const today=fmtDate(new Date());
+  const days=LS.get('m_checkin',[]);
+  if(days.includes(today))return;
+  days.push(today);
+  LS.set('m_checkin',days);
+  renderCheckin();
+  updateStats();
+}
+function renderCheckin(){
+  const days=LS.get('m_checkin',[]);
+  const today=fmtDate(new Date());
+  const btn=document.getElementById('checkinBtn');
+  if(btn){
+    if(days.includes(today)){btn.textContent='✓ 今日已打卡';btn.classList.add('done');}
+    else{btn.textContent='今日打卡';btn.classList.remove('done');}
+  }
+  // 连续天数
+  let streak=0;
+  const d=new Date();
+  while(days.includes(fmtDate(d))){streak++;d.setDate(d.getDate()-1);}
+  if(!days.includes(today)){d.setDate(d.getDate()-1);while(days.includes(fmtDate(d))){streak++;d.setDate(d.getDate()-1);}}
+  const st2=document.getElementById('streakText');
+  if(st2)st2.textContent=`连续打卡 ${streak} 天 🔥`;
+  // 最近14天日历
+  const grid=document.getElementById('calGrid');
+  if(grid){
+    let h='';
+    for(let i=13;i>=0;i--){
+      const d2=new Date();d2.setDate(d2.getDate()-i);
+      const ds=fmtDate(d2);
+      const isToday=ds===today;
+      const done=days.includes(ds);
+      h+=`<div class="cal-day ${done?'done':''} ${isToday?'today':''}">${d2.getDate()}</div>`;
+    }
+    grid.innerHTML=h;
+  }
+}
+
+/* ========== 学习报告 ========== */
+function renderReport(){
+  const box=document.getElementById('reportBox');
+  if(!box)return;
+  const qz=st.qz;
+  const total=qz.total||0,right=qz.right||0;
+  // 按章节统计
+  const catStat={};
+  Object.keys(qz.seen||{}).forEach(i=>{
+    const t=QZ[i]?.t;if(!t)return;
+    if(!catStat[t])catStat[t]={s:0,r:0};
+    catStat[t].s++;
+  });
+  // 找薄弱章节
+  let weakCh=null,weakRate=1;
+  Object.keys(catStat).forEach(t=>{
+    const c=catStat[t];
+    // 算该章正确数（简单估算）
+  });
+  let html=`<p>总做题：<b>${total}</b>　正确：<b>${right}</b>　正确率：<b>${total?Math.round(right/total*100):0}%</b></p>`;
+  html+='<div class="rbar"><div class="lbl">正确率</div><div class="track"><span style="width:'+(total?right/total*100:0)+'%"></span></div><div class="val">'+(total?Math.round(right/total*100):0)+'%</div></div>';
+  html+='<p style="margin-top:10px;font-size:13px;color:var(--sub)">已学章节：'+Object.keys(catStat).length+' / 17</p>';
+  box.innerHTML=html;
+}
+
+/* ========== 知识卡片 ========== */
+let cardIdx=0,cardFlipped=false;
+const CARDS=[];
+CHAPTERS.forEach(ch=>ch.lessons.forEach(l=>(l.kp||[]).forEach(k=>CARDS.push({ch:ch.title,q:k.replace(/^(.+?)[：:].*/,'$1')+'？',a:k}))));
+function showCard(){
+  const c=CARDS[cardIdx];
+  const box=document.getElementById('cardContent');
+  if(!c){box.innerHTML='<div class="empty"><div class="ic">🎉</div>还没有卡片</div>';return;}
+  box.innerHTML=`<div class="flash-card" onclick="flipCard()">
+    <div class="ftag">${c.ch} (${cardIdx+1}/${CARDS.length})</div>
+    <div class="ftext">${c.q}</div>
+    ${cardFlipped?`<div class="fback">${c.a}</div>`:'<div style="margin-top:12px;font-size:13px;color:var(--sub)">点击查看答案</div>'}
+  </div>`;
+}
+function flipCard(){cardFlipped=!cardFlipped;showCard();}
+function nextCard(){cardFlipped=false;cardIdx=(cardIdx+1)%CARDS.length;showCard();}
+function prevCard(){cardFlipped=false;cardIdx=(cardIdx-1+CARDS.length)%CARDS.length;showCard();}
 
 /* init */
 renderChapters();
 updateStats();
+renderCheckin();
+renderReport();
+showCard();
 </script>
 </body>
 </html>
