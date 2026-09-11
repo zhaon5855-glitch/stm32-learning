@@ -219,6 +219,16 @@ table th{background:#f1f5f9}
 .checkin-btn{background:linear-gradient(135deg,#f59e0b,#ef4444);color:#fff;border:none;border-radius:10px;padding:14px;font-size:15px;font-weight:600;width:100%;cursor:pointer;margin:8px 0}
 .checkin-btn.done{background:var(--ok)}
 .streak{font-size:12px;color:var(--sub);text-align:center;margin-top:4px}
+.badge-wall{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:10px}
+.badge{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 4px;border-radius:10px;background:var(--bg);text-align:center;transition:all .3s}
+.badge.locked{opacity:.3;filter:grayscale(1)}
+.badge .b-ico{font-size:28px}
+.badge .b-name{font-size:11px;font-weight:600;color:var(--txt);line-height:1.2}
+.badge .b-desc{font-size:10px;color:var(--sub);line-height:1.2}
+.badge.unlocked{background:linear-gradient(135deg,#fef3c7,#fde68a);box-shadow:0 2px 8px rgba(245,158,11,.2)}
+.badge.unlocked .b-name{color:#92400e}
+@keyframes badgePop{0%{transform:scale(0) rotate(-180deg)}60%{transform:scale(1.2) rotate(10deg)}100%{transform:scale(1) rotate(0)}}
+.badge.just-unlocked{animation:badgePop .6s ease}
 .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-top:8px}
 .cal-day{aspect-ratio:1;border-radius:6px;background:var(--line);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--sub)}
 .cal-day.done{background:var(--ok);color:#fff}
@@ -293,6 +303,16 @@ body.dark .theme-toggle{background:rgba(255,255,255,.1)}
   <div class="card" style="cursor:pointer" onclick="showPage('page-modules')">
     <h3>🔌 模块驱动速查</h3>
     <p>OLED/DHT11/DS18B20/MPU6050/ESP8266等模块接线+关键驱动函数</p>
+    <div class="pbar"><span style="width:100%"></span></div>
+  </div>
+  <div class="card" style="cursor:pointer" onclick="showPage('page-challenge')">
+    <h3>🧩 代码填空闯关</h3>
+    <p>补全STM32代码，用模拟器验证，边玩边练写代码</p>
+    <div class="pbar"><span style="width:100%"></span></div>
+  </div>
+  <div class="card" style="cursor:pointer" onclick="showPage('page-bitop')">
+    <h3>🎮 位运算挑战</h3>
+    <p>用位运算操作寄存器达成目标，练STM32最难的基本功</p>
     <div class="pbar"><span style="width:100%"></span></div>
   </div>
   <div class="section-title">全部章节（按顺序解锁）</div>
@@ -377,6 +397,20 @@ body.dark .theme-toggle{background:rgba(255,255,255,.1)}
   <div id="modulesBody"></div>
 </div>
 
+<!-- 代码填空闯关 -->
+<div class="page" id="page-challenge">
+  <div class="topbar"><span class="back" onclick="goHome()">‹</span><h1>🧩 代码填空闯关</h1></div>
+  <div style="padding:12px 14px;font-size:13px;color:var(--sub)">补全代码，用模拟器验证是否达到目标</div>
+  <div id="challengeBody"></div>
+</div>
+
+<!-- 寄存器位运算挑战 -->
+<div class="page" id="page-bitop">
+  <div class="topbar"><span class="back" onclick="goHome()">‹</span><h1>🎮 位运算挑战</h1></div>
+  <div style="padding:12px 14px;font-size:13px;color:var(--sub)">用位运算操作寄存器，达成目标状态</div>
+  <div id="bitopBody"></div>
+</div>
+
 <!-- ME -->
 <div class="page" id="page-me">
   <div class="topbar"><h1>我的</h1></div>
@@ -407,6 +441,10 @@ body.dark .theme-toggle{background:rgba(255,255,255,.1)}
   <div class="card">
     <h3>📊 学习报告</h3>
     <div id="reportBox"></div>
+  </div>
+  <div class="card">
+    <h3>🏆 成就徽章 <span id="badgeCount" style="font-size:13px;color:var(--sub);font-weight:normal">0/0</span></h3>
+    <div id="badgeWall" class="badge-wall"></div>
   </div>
   <div class="card" onclick="showPage('page-cards')">
     <h3>🎴 知识卡片</h3>
@@ -4025,6 +4063,74 @@ const LS={get:(k,d)=>{try{return JSON.parse(localStorage.getItem(k))??d}catch(e)
 let st={done:LS.get('m_done',{}),fav:LS.get('m_fav',[]),qz:LS.get('m_qz',{wrong:{},seen:{},right:0,total:0,due:{}}),curChap:null,curLesson:null};
 // 迁移：已完成第1章的老用户，自动标记第0章(C语言)为已完成，避免回锁
 if(st.done['1-1'] && !st.done['0-1']){CHAPTERS[0].lessons.forEach(l=>st.done[l.id]=1);LS.set('m_done',st.done);}
+
+/* ========== 成就徽章系统 ========== */
+const BADGES=[
+  {id:'first_light',ico:'💡',name:'初亮明灯',desc:'完成第1章第1节'},
+  {id:'c_master',ico:'📘',name:'C语言入门',desc:'完成第0章所有课'},
+  {id:'gpio_pro',ico:'🔌',name:'GPIO控灯',desc:'完成第4章GPIO章节'},
+  {id:'usart_pro',ico:'📡',name:'串口达人',desc:'完成第8章串口章节'},
+  {id:'rtos_pro',ico:'🌀',name:'RTOS入门',desc:'完成第15章FreeRTOS'},
+  {id:'half_done',ico:'🏅',name:'半程先锋',desc:'完成50%课程'},
+  {id:'all_done',ico:'👑',name:'全能大师',desc:'完成全部课程'},
+  {id:'quiz10',ico:'✏️',name:'答题新手',desc:'做对10道题'},
+  {id:'quiz50',ico:'📝',name:'答题能手',desc:'做对50道题'},
+  {id:'quiz100',ico:'🎓',name:'答题大师',desc:'做对100道题'},
+  {id:'sim_run',ico:'⚡',name:'动手达人',desc:'在模拟器运行代码'},
+  {id:'checkin3',ico:'🔥',name:'三日不辍',desc:'连续打卡3天'},
+  {id:'checkin7',ico:'⭐',name:'一周坚持',desc:'连续打卡7天'},
+  {id:'checkin30',ico:'🏆',name:'月度学霸',desc:'累计打卡30天'},
+];
+let badges=LS.get('m_badges',{});
+function checkBadges(){
+  const before={...badges};
+  const doneList=Object.keys(st.done);
+  const totalLessons=CHAPTERS.reduce((s,c)=>s+c.lessons.length,0);
+  const doneCount=doneList.length;
+  if(st.done['1-1']) badges['first_light']=1;
+  if(CHAPTERS[0].lessons.every(l=>st.done[l.id])) badges['c_master']=1;
+  if(CHAPTERS.find(c=>c.id===4)?.lessons.every(l=>st.done[l.id])) badges['gpio_pro']=1;
+  if(CHAPTERS.find(c=>c.id===8)?.lessons.every(l=>st.done[l.id])) badges['usart_pro']=1;
+  if(CHAPTERS.find(c=>c.id===15)?.lessons.every(l=>st.done[l.id])) badges['rtos_pro']=1;
+  if(doneCount/totalLessons>=0.5) badges['half_done']=1;
+  if(doneCount>=totalLessons) badges['all_done']=1;
+  if(st.qz.right>=10) badges['quiz10']=1;
+  if(st.qz.right>=50) badges['quiz50']=1;
+  if(st.qz.right>=100) badges['quiz100']=1;
+  const days=LS.get('m_checkin',[]);
+  if(days.length>=3) badges['checkin3']=1;
+  if(days.length>=7) badges['checkin7']=1;
+  if(days.length>=30) badges['checkin30']=1;
+  const newly=Object.keys(badges).filter(k=>!before[k]);
+  LS.set('m_badges',badges);
+  return newly;
+}
+function unlockBadge(id){
+  if(badges[id]) return false;
+  badges[id]=1; LS.set('m_badges',badges); return true;
+}
+function renderBadges(animateId){
+  const wall=document.getElementById('badgeWall');
+  const cnt=document.getElementById('badgeCount');
+  if(!wall) return;
+  const unlocked=Object.keys(badges).filter(k=>badges[k]).length;
+  if(cnt) cnt.textContent=`${unlocked}/${BADGES.length}`;
+  wall.innerHTML=BADGES.map(b=>{
+    const on=badges[b.id];
+    return `<div class="badge ${on?'unlocked':'locked'} ${b.id===animateId?'just-unlocked':''}" title="${b.desc}">
+      <div class="b-ico">${on?b.ico:'🔒'}</div>
+      <div class="b-name">${b.name}</div>
+      <div class="b-desc">${b.desc}</div>
+    </div>`;
+  }).join('');
+}
+function alertBadges(ids){
+  const names=ids.map(id=>{const b=BADGES.find(x=>x.id===id);return b?`${b.ico} ${b.name}`:id;}).join('、');
+  setTimeout(()=>{
+    alert('🎉 解锁新成就：\n'+names);
+    renderBadges();
+  },300);
+}
 let quizState=null;
 
 /* 渲染首页章节列表 */
@@ -4144,6 +4250,8 @@ function changeFs(d){
 function markDone(id){
   if(st.done[id])delete st.done[id];else st.done[id]=1;
   LS.set('m_done',st.done);
+  const newly=checkBadges();
+  if(newly.length) alertBadges(newly);
   renderChapters();
   openLesson(st.curChap,st.curLesson);
 }
@@ -4258,6 +4366,7 @@ function submitQuiz(ans){
   else{st.qz.wrong[i]=(st.qz.wrong[i]||0)+1;updateDue(i,false);}
   if(correct)quizState.correct++;
   LS.set('m_qz',st.qz);
+  if(correct){const newly=checkBadges();if(newly.length)alertBadges(newly);}
   updateStats();
 }
 
@@ -4351,6 +4460,7 @@ function updateStats(){
   document.getElementById('mCh').textContent=Math.round(doneLs/totalLs*100)+'%';
   document.getElementById('mDay').textContent=LS.get('m_checkin',[]).length;
   document.getElementById('mFav').textContent=st.fav.length;
+  renderBadges();
 }
 
 function updateMe(){updateStats();
@@ -4389,6 +4499,8 @@ function showPage(id){
   if(id==='page-hal')renderHal();
   if(id==='page-interview')renderInterview();
   if(id==='page-modules')renderModules();
+  if(id==='page-challenge')renderChallenge();
+  if(id==='page-bitop')renderBitop();
   if(id==='page-sim')renderPinMap();
 }
 
@@ -4741,6 +4853,212 @@ function renderModules(){
   document.getElementById('modulesBody').innerHTML=MODULES_CONTENT;
 }
 
+/* ========== 代码填空闯关 ========== */
+const CHALLENGES=[
+  {id:1,title:'第1关：点亮LED',desc:'补全代码，让DS1(PE5)点亮（低电平有效）',
+   skeleton:`int main(void){
+  RCC->AHB1ENR |= 0x10;        // 开GPIOE时钟
+  GPIOE->MODER = ___1___;      // PE5设为输出(01)
+  GPIOE->ODR = ___2___;        // PE5输出低电平，点亮DS1
+  printf("LED ON\\n");
+}`,
+   answers:['(1<<10)','0x00'],
+   hint:'MODER每2位控制1个引脚，PE5是第5个引脚，对应bit10-11。输出模式是01，所以(1<<10)。低电平点亮所以ODR的bit5=0。'},
+  {id:2,title:'第2关：LED闪烁',desc:'让DS1每秒闪烁一次（亮500ms灭500ms），循环3次',
+   skeleton:`int main(void){
+  RCC->AHB1ENR |= 0x10;
+  GPIOE->MODER = (1<<10);
+  int i;
+  for(i=0;i<3;i++){
+    GPIOE->ODR = ___1___;   // 亮(bit5=0)
+    delay_ms(___2___);      // 等500ms
+    GPIOE->ODR = 0x20;      // 灭(bit5=1)
+    delay_ms(500);
+  }
+  printf("done\\n");
+}`,
+   answers:['0x00','500'],
+   hint:'亮是低电平，ODR bit5=0即0x00。延时500毫秒。'},
+  {id:3,title:'第3关：串口发送',desc:'用uart_send发送"Hello STM32"',
+   skeleton:`int main(void){
+  char msg[] = "Hello STM32";
+  uart_send(___1___);
+  printf("sent\\n");
+}`,
+   answers:['msg'],
+   hint:'数组名msg就是字符串首地址，直接传msg。'},
+  {id:4,title:'第4关：按键检测',desc:'检测按键，按下时打印"pressed"',
+   skeleton:`int main(void){
+  while(1){
+    if(___1___()){          // 检测按键是否按下
+      printf("pressed\\n");
+    }
+    delay_ms(100);
+  }
+}`,
+   answers:['button_pressed'],
+   hint:'模拟器提供了button_pressed()函数，按下返回1。'},
+  {id:5,title:'第5关：位运算置位清位',desc:'用BSRR寄存器把PE5置1再清0',
+   skeleton:`int main(void){
+  RCC->AHB1ENR |= 0x10;
+  GPIOE->MODER = (1<<10);
+  GPIOE->BSRR = ___1___;   // 置位PE5(写bit5=1)
+  delay_ms(300);
+  GPIOE->BSRR = ___2___;   // 清位PE5(写bit21=1,即5+16)
+  printf("toggle done\\n");
+}`,
+   answers:['(1<<5)','(1<<21)'],
+   hint:'BSRR低16位写1置位，高16位写1清位。清PE5要写bit(5+16)=bit21。'}
+];
+let chalLevel=0, chalPassed=LS.get('m_chal',0);
+function renderChallenge(){
+  const lv=Math.min(chalLevel,CHALLENGES.length);
+  const c=CHALLENGES[lv];
+  const body=document.getElementById('challengeBody');
+  if(lv>=CHALLENGES.length){
+    body.innerHTML=`<div class="hal-sec" style="text-align:center;padding:30px">
+      <div style="font-size:48px">🎉</div>
+      <h2>恭喜通关！</h2>
+      <p>你已完成全部 ${CHALLENGES.length} 关代码填空</p>
+      <button class="btn" onclick="chalLevel=0;renderChallenge()">重新挑战</button>
+    </div>`;
+    return;
+  }
+  // 把 skeleton 拆分成带输入框的代码块
+  const parts=c.skeleton.split(/(___\d___)/);
+  let codeHTML='';
+  parts.forEach(p=>{
+    if(/^___\d___$/.test(p)){
+      const idx=parseInt(p.match(/\d/)[0])-1;
+      codeHTML+=`<input class="chal-input" data-idx="${idx}" style="width:80px;padding:2px 6px;border:2px solid #f59e0b;border-radius:4px;background:#fef3c7;font-family:Consolas,monospace;font-size:13px" placeholder="?">`;
+    } else {
+      codeHTML+=p.replace(/\n/g,'<br>');
+    }
+  });
+  body.innerHTML=`<div class="hal-sec">
+    <h2 class="hal-h">${c.title}</h2>
+    <p style="font-size:13px;color:var(--sub)">${c.desc}</p>
+    <div style="background:#1e293b;color:#e2e8f0;border-radius:10px;padding:14px;font-family:Consolas,monospace;font-size:13px;line-height:1.8;overflow:auto">${codeHTML}</div>
+    <details style="margin:10px 0"><summary style="cursor:pointer;color:var(--pri);font-size:13px">💡 提示</summary><p style="font-size:13px;color:var(--sub);margin-top:6px">${c.hint}</p></details>
+    <div style="display:flex;gap:8px">
+      <button class="btn" style="flex:1" onclick="checkChallenge()">▶ 运行验证</button>
+      <button class="btn ghost" onclick="showChallengeAnswer()">查看答案</button>
+    </div>
+    <div id="chalResult" style="margin-top:10px;font-size:13px"></div>
+  </div>
+  <div style="text-align:center;color:var(--sub);font-size:12px;margin:10px">关卡 ${lv+1}/${CHALLENGES.length} · 已通关 ${chalPassed}</div>`;
+}
+function showChallengeAnswer(){
+  const c=CHALLENGES[Math.min(chalLevel,CHALLENGES.length-1)];
+  document.querySelectorAll('.chal-input').forEach(inp=>{
+    const idx=parseInt(inp.dataset.idx);
+    inp.value=c.answers[idx];
+  });
+}
+function checkChallenge(){
+  const c=CHALLENGES[Math.min(chalLevel,CHALLENGES.length-1)];
+  const inputs=document.querySelectorAll('.chal-input');
+  let ok=true;
+  inputs.forEach(inp=>{
+    const idx=parseInt(inp.dataset.idx);
+    if(inp.value.trim()!==c.answers[idx]) ok=false;
+  });
+  const resultEl=document.getElementById('chalResult');
+  if(ok){
+    resultEl.innerHTML='<div style="color:var(--ok);font-weight:bold">✓ 通关！代码正确</div>';
+    chalLevel++;
+    chalPassed=Math.max(chalPassed, chalLevel);
+    LS.set('m_chal',chalPassed);
+    setTimeout(renderChallenge,1200);
+  } else {
+    resultEl.innerHTML='<div style="color:var(--err)">✗ 答案不对，再想想？看提示或查看答案。</div>';
+  }
+}
+
+/* ========== 寄存器位运算挑战 ========== */
+const BITOP_LEVELS=[
+  {id:1,title:'第1关：配置PE5为输出',desc:'GPIOE->MODER 初始=0。请让 PE5(bit10-11) 变成输出模式 01',
+   reg:'MODER',init:0,target:(1<<10),check:(v)=>((v>>10)&3)===1,answer:'(1<<10)',
+   hint:'输出模式是01，设置bit10为1。写 (1<<10)'},
+  {id:2,title:'第2关：PE5输出高电平',desc:'GPIOE->ODR 初始=0。请把PE5置1(bit5=1)',
+   reg:'ODR',init:0x00,target:(1<<5),check:(v)=>((v>>5)&1)===1,answer:'(1<<5)',
+   hint:'置位：写 (1<<5)'},
+  {id:3,title:'第3关：PE5输出低电平(点亮LED)',desc:'GPIOE->ODR 初始=0x20(PE5高)。请把PE5清0(bit5=0)，其他位不变',
+   reg:'ODR',init:0x20,target:0x00,check:(v)=>((v>>5)&1)===0,answer:'0x20 & ~(1<<5)',
+   hint:'清位：写 0x20 & ~(1<<5)  （保留其他位，只清bit5）'},
+  {id:4,title:'第4关：翻转PE5',desc:'GPIOE->ODR 初始=0x20。请翻转PE5的电平(bit5取反)，其他位不变',
+   reg:'ODR',init:0x20,target:0x00,check:(v)=>((v>>5)&1)===0,answer:'0x20 ^ (1<<5)',
+   hint:'翻转：写 0x20 ^ (1<<5)'},
+  {id:5,title:'第5关：同时配置PE5和PE6为输出',desc:'GPIOE->MODER 初始=0。请让 PE5(bit10-11)和PE6(bit12-13)都变成输出 01',
+   reg:'MODER',init:0,target:(1<<10)|(1<<12),check:(v)=>((v>>10)&3)===1&&((v>>12)&3)===1,answer:'(1<<10) | (1<<12)',
+   hint:'两个位都置1：写 (1<<10) | (1<<12)'}
+];
+let bitopLevel=0, bitopPassed=LS.get('m_bitop',0);
+function renderBitop(){
+  const lv=Math.min(bitopLevel,BITOP_LEVELS.length);
+  const body=document.getElementById('bitopBody');
+  if(lv>=BITOP_LEVELS.length){
+    body.innerHTML=`<div class="hal-sec" style="text-align:center;padding:30px">
+      <div style="font-size:48px">🎉</div>
+      <h2>位运算大师！</h2>
+      <p>你已完成全部 ${BITOP_LEVELS.length} 关位运算挑战</p>
+      <button class="btn" onclick="bitopLevel=0;renderBitop()">重新挑战</button>
+    </div>`;
+    return;
+  }
+  const l=BITOP_LEVELS[lv];
+  body.innerHTML=`<div class="hal-sec">
+    <h2 class="hal-h">${l.title}</h2>
+    <p style="font-size:13px;color:var(--sub)">${l.desc}</p>
+    <div style="background:#1e293b;color:#e2e8f0;border-radius:10px;padding:14px;font-family:Consolas,monospace;font-size:13px;line-height:1.8">
+      <div style="color:#94a3b8">GPIOE->${l.reg} = 0x${l.init.toString(16).padStart(8,'0')}; <span style="color:#64748b">// 初始值</span></div>
+      <div style="color:#fbbf24">GPIOE->${l.reg} = <input id="bitopInput" style="width:200px;padding:4px 8px;border:2px solid #f59e0b;border-radius:4px;background:#fef3c7;font-family:Consolas,monospace;font-size:14px" placeholder="输入新值表达式"> ;</div>
+    </div>
+    <div style="margin:10px 0;font-size:13px">
+      <div>目标：${l.reg} → <b style="color:var(--pri)">0x${l.target.toString(16).padStart(8,'0')}</b></div>
+      <div id="bitopCur" style="color:var(--sub)">当前：${l.reg} = 0x${l.init.toString(16).padStart(8,'0')}</div>
+    </div>
+    <details style="margin:10px 0"><summary style="cursor:pointer;color:var(--pri);font-size:13px">💡 提示</summary><p style="font-size:13px;color:var(--sub);margin-top:6px">${l.hint}</p></details>
+    <div style="display:flex;gap:8px">
+      <button class="btn" style="flex:1" onclick="checkBitop()">▶ 执行验证</button>
+      <button class="btn ghost" onclick="showBitopAnswer()">查看答案</button>
+    </div>
+    <div id="bitopResult" style="margin-top:10px;font-size:13px"></div>
+  </div>
+  <div style="text-align:center;color:var(--sub);font-size:12px;margin:10px">关卡 ${lv+1}/${BITOP_LEVELS.length} · 已通关 ${bitopPassed}</div>`;
+}
+function showBitopAnswer(){
+  const l=BITOP_LEVELS[Math.min(bitopLevel,BITOP_LEVELS.length-1)];
+  document.getElementById('bitopInput').value=l.answer;
+}
+function checkBitop(){
+  const l=BITOP_LEVELS[Math.min(bitopLevel,BITOP_LEVELS.length-1)];
+  const expr=document.getElementById('bitopInput').value.trim();
+  const resultEl=document.getElementById('bitopResult');
+  let val=l.init;
+  try{
+    // 安全地计算表达式：只允许数字、|、&、^、~、<<、>>、括号、1<<n
+    if(!/^[0-9xXa-fA-F\|\&\^\~<>\(\)\s]+$/.test(expr)){
+      resultEl.innerHTML='<div style="color:var(--err)">✗ 表达式只能包含位运算符和数字</div>';return;
+    }
+    // eslint-disable-next-line no-new-func
+    val=Function('"use strict";return ('+expr+')')();
+    val=val>>>0;
+    document.getElementById('bitopCur').innerHTML='当前：'+l.reg+' = 0x'+val.toString(16).padStart(8,'0');
+    if(l.check(val)){
+      resultEl.innerHTML='<div style="color:var(--ok);font-weight:bold">✓ 通关！位运算正确</div>';
+      bitopLevel++;
+      bitopPassed=Math.max(bitopPassed,bitopLevel);
+      LS.set('m_bitop',bitopPassed);
+      setTimeout(renderBitop,1200);
+    } else {
+      resultEl.innerHTML='<div style="color:var(--err)">✗ 没达到目标值，再试试？</div>';
+    }
+  }catch(e){
+    resultEl.innerHTML='<div style="color:var(--err)">❌ 表达式错误：'+e.message+'</div>';
+  }
+}
+
 function goHome(){showPage('page-home');renderChapters();document.getElementById('searchInput').value='';document.getElementById('searchResult').innerHTML='';}
 function backFromLesson(){showPage('page-chapter');}
 
@@ -4790,6 +5108,8 @@ function doCheckin(){
   if(days.includes(today))return;
   days.push(today);
   LS.set('m_checkin',days);
+  const newly=checkBadges();
+  if(newly.length) alertBadges(newly);
   renderCheckin();
   updateStats();
 }
@@ -6017,6 +6337,7 @@ async function runSim(){
   }
   simRunning=false; simStop=false;
   simCurLine=0; renderHighlight();
+  if(unlockBadge('sim_run')) alertBadges(['sim_run']);
   btn.textContent='▶ 运行';
 }
 
