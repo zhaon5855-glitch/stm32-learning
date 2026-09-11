@@ -77,6 +77,19 @@ pre .copy-btn{margin-bottom:6px}
 .warn-box{background:#fee2e2;border-left:4px solid var(--err);padding:10px 12px;border-radius:6px;margin:12px 0;font-size:14px;color:#991b1b}
 .bug-box{background:#fffbeb;border-left:4px solid #f59e0b;padding:10px 12px;border-radius:6px;margin:12px 0;font-size:13.5px;color:#78350f}
 .bug-box p{margin:4px 0}
+/* roadmap */
+.rm-overview{margin:12px;padding:14px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border-radius:12px;font-size:15px}
+.rm-stage{margin:12px;background:var(--card);border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.rm-stage-hd{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:#fafafa}
+.rm-stage-hd b{font-size:14px}
+.rm-desc{font-size:12px;color:var(--sub);margin-top:3px}
+.rm-pct{font-size:16px;font-weight:bold;color:var(--sub)}
+.rm-ch-list{padding:4px 10px 10px}
+.rm-ch{padding:8px 10px;border-radius:8px;cursor:pointer;margin-top:6px;background:#f8fafc;transition:background .15s}
+.rm-ch:active{background:#eef2ff}
+.rm-ch-top{display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px}
+.rm-count{color:var(--sub);font-size:12px}
+.pbar.sm{height:5px}
 table{width:100%;border-collapse:collapse;margin:10px 0;font-size:13px}
 table th,table td{border:1px solid var(--line);padding:6px 8px;text-align:left}
 table th{background:#f1f5f9}
@@ -89,6 +102,10 @@ table th{background:#f1f5f9}
 /* quiz */
 .quiz-card{background:var(--card);margin:12px;border-radius:12px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
 .quiz-card .qtag{display:inline-block;background:#eef2ff;color:var(--pri2);font-size:11px;padding:2px 8px;border-radius:4px;margin-bottom:8px}
+.lvl{display:inline-block;font-size:10px;padding:1px 6px;border-radius:3px;margin-left:4px;font-weight:bold}
+.lvl1{background:#dcfce7;color:#166534}
+.lvl2{background:#fef3c7;color:#92400e}
+.lvl3{background:#fce7f3;color:#9d174d}
 .quiz-card .qtxt{font-size:15px;font-weight:500;margin-bottom:12px;line-height:1.5}
 .opt{display:block;background:#f8fafc;border:1.5px solid var(--line);border-radius:8px;padding:10px 12px;margin:8px 0;cursor:pointer;font-size:14px;transition:all .15s}
 .opt:active{background:#eef2ff}
@@ -217,6 +234,11 @@ body.dark .theme-toggle{background:rgba(255,255,255,.1)}
     <p id="contText">点击开始第一课</p>
     <div class="pbar"><span id="contProg" style="width:0%"></span></div>
   </div>
+  <div class="card" style="cursor:pointer" onclick="showPage('page-roadmap');renderRoadmap()">
+    <h3>🗺️ 学习路线进度</h3>
+    <p>C语言 → 基础外设 → FreeRTOS → 通信协议 → 综合项目，知道自己学到哪、下一步学什么</p>
+    <div class="pbar"><span id="roadProg" style="width:0%"></span></div>
+  </div>
   <div class="section-title">全部章节（按顺序解锁）</div>
   <div id="chapList"></div>
 </div>
@@ -244,6 +266,13 @@ body.dark .theme-toggle{background:rgba(255,255,255,.1)}
     <div class="stat-box" style="flex:1;min-width:80px" onclick="startPractice('exam')"><div class="num">📝</div><div class="lbl">模拟考</div></div>
     <div class="stat-box" style="flex:1;min-width:80px" onclick="startPractice('daily')"><div class="num">📅</div><div class="lbl">每日10题</div></div>
   </div>
+  <div class="section-title">按难度练习</div>
+  <div class="card" style="display:flex;gap:10px;flex-wrap:wrap">
+    <div class="stat-box" style="flex:1;min-width:80px" onclick="startPractice('level1')"><div class="num" style="color:#16a34a">🌱</div><div class="lbl">基础题</div></div>
+    <div class="stat-box" style="flex:1;min-width:80px" onclick="startPractice('level2')"><div class="num" style="color:#ca8a04">🐛</div><div class="lbl">改错题</div></div>
+    <div class="stat-box" style="flex:1;min-width:80px" onclick="startPractice('level3')"><div class="num" style="color:#db2777">💡</div><div class="lbl">编程思考</div></div>
+  </div>
+  <p style="font-size:12px;color:var(--sub);padding:0 4px">改错题：给一段有bug的代码找错误 ｜ 编程思考：只给需求，自己构思逻辑</p>
   <div class="section-title">按章节练习</div>
   <div id="pracChapList"></div>
   <div class="section-title">学习统计</div>
@@ -263,6 +292,12 @@ body.dark .theme-toggle{background:rgba(255,255,255,.1)}
   <div style="padding:12px">
     <button class="btn block" id="quizNext" onclick="quizNext()">下一题</button>
   </div>
+</div>
+
+<!-- ROADMAP 学习路线 -->
+<div class="page" id="page-roadmap">
+  <div class="topbar"><span class="back" onclick="goHome()">‹</span><h1>学习路线进度</h1></div>
+  <div id="roadmapBody"></div>
 </div>
 
 <!-- ME -->
@@ -401,6 +436,177 @@ body.dark .theme-toggle{background:rgba(255,255,255,.1)}
    每课：id, 标题, 内容HTML, 关键点, 关联习题id
    ============================================================ */
 const CHAPTERS = [
+/* ===== 第0章 C语言基础（单片机专用） ===== */
+{id:0,ico:'📘',title:'第0章 C语言基础（单片机专用）',desc:'只学STM32真正用到的C',lessons:[
+ {id:'0-1',title:'0.1 指针：地址与解引用',kp:['指针存的是变量的内存地址','*p 读/写地址里的值','&a 取变量a的地址','数组名就是首元素地址','函数指针=回调，HAL库到处都是'],content:`
+<h3>为什么单片机必须学指针</h3>
+<p>STM32寄存器就是一块内存，操作寄存器本质就是操作内存地址。<b>不会指针就看不懂HAL库源码</b>，也写不出高效的驱动。</p>
+<h3>指针基本操作</h3>
+<pre><code>int a = 10;
+int *p = &a;    // p存a的地址，&是取地址符
+*p = 20;        // *是解引用，修改p指向地址里的值 → a变成20
+printf("%d", a); // 输出20</code></pre>
+<div class="tip">💡 <b>记忆：</b><code>int *p</code>里的*是"声明指针"，<code>*p = 20</code>里的*是"访问指针指向的值"。同一个符号两个意思，别搞混。</div>
+<h3>指针和数组</h3>
+<pre><code>int arr[3] = {1,2,3};
+int *p = arr;     // 数组名arr就是首元素地址，等于&arr[0]
+printf("%d", *p);     // 1，即arr[0]
+printf("%d", *(p+1)); // 2，即arr[1]，p+1指向下一个int
+printf("%d", p[2]);   // 3，指针也能用[]下标</code></pre>
+<h3>函数指针（回调）</h3>
+<p>HAL库的中断回调就是函数指针：中断发生时，库调用你注册的函数。</p>
+<pre><code>// 声明一个函数指针类型，指向"无返回值、int参数"的函数
+typedef void (*Callback_t)(int);
+
+void myFunc(int x){ printf("收到%d\\n", x); }
+
+Callback_t cb = myFunc;  // cb指向myFunc
+cb(100);                  // 调用，输出"收到100"</code></pre>
+<p>STM32里的例子：<code>HAL_UART_RxCpltCallback</code> 就是你注册的回调，串口收到数据时HAL自动调用。</p>
+`},
+ {id:'0-2',title:'0.2 结构体与联合体',kp:['struct把多个变量打包成一个整体','.访问成员，->用指针访问','union共享内存，节省空间或拆解寄存器','typedef起别名让代码更短'],content:`
+<h3>结构体struct</h3>
+<p>把相关数据打包，比如一个传感器的温度、湿度、时间戳：</p>
+<pre><code>typedef struct {
+    float temp;
+    float humi;
+    uint32_t timestamp;
+} SensorData_t;    // typedef起别名，以后直接用SensorData_t
+
+SensorData_t data;
+data.temp = 25.5;       // . 访问成员
+data.humi = 60.0;
+
+SensorData_t *p = &data;
+p->temp = 26.0;         // 指针用 -> 访问，等价于(*p).temp</code></pre>
+<div class="kp"><b>HAL库全是结构体：</b><code>GPIO_InitTypeDef</code>、<code>UART_HandleTypeDef</code>都是结构体，配置外设就是填结构体成员。</div>
+<h3>联合体union</h3>
+<p>union所有成员共享同一块内存，大小等于最大成员。两个用途：</p>
+<p><b>用途1：节省内存</b>（几种状态只会用一种时）</p>
+<pre><code>typedef union {
+    int ival;
+    float fval;
+    char sval[4];
+} Value_t;  // 只占4字节，三种类型共用</code></pre>
+<p><b>用途2：拆解寄存器/数据</b>（把一个32位数拆成4个字节看）</p>
+<pre><code>typedef union {
+    uint32_t word;
+    uint8_t  byte[4];
+} Word_t;
+
+Word_t w;
+w.word = 0x12345678;
+printf("%x %x %x %x", w.byte[0], w.byte[1], w.byte[2], w.byte[3]);
+// 小端输出: 78 56 34 12</code></pre>
+<div class="warn-box">⚠️ <b>字节序：</b>STM32是小端模式，低字节存在低地址。用union拆数据时要注意顺序。</div>
+`},
+ {id:'0-3',title:'0.3 位运算与位域',kp:['&清0、|置1、^翻转、~取反','<< >>移位','置位: reg|=(1<<n) 清位: reg&=~(1<<n)','位域: 在struct里按位定义成员'],content:`
+<h3>6种位运算</h3>
+<table>
+<tr><th>运算符</th><th>作用</th><th>例子(8位)</th></tr>
+<tr><td>&</td><td>按位与(有0则0)</td><td>0b1100 & 0b1010 = 0b1000</td></tr>
+<tr><td>|</td><td>按位或(有1则1)</td><td>0b1100 | 0b1010 = 0b1110</td></tr>
+<tr><td>^</td><td>按位异或(不同为1)</td><td>0b1100 ^ 0b1010 = 0b0110</td></tr>
+<tr><td>~</td><td>按位取反</td><td>~0b1100 = 0b...0011</td></tr>
+<tr><td><<</td><td>左移(低位补0)</td><td>1<<3 = 8 (0b1000)</td></tr>
+<tr><td>>></td><td>右移</td><td>8>>2 = 2</td></tr>
+</table>
+<h3>寄存器操作三件套</h3>
+<pre><code>#define BIT(n)  (1 << (n))
+
+// 置位：把第n位变成1
+reg |= BIT(5);        // reg的第5位置1
+
+// 清位：把第n位变成0
+reg &= ~BIT(5);       // reg的第5位清0
+
+// 翻转：把第n位取反
+reg ^= BIT(5);
+
+// 读取第n位
+if(reg & BIT(5)){ /* 第5位是1 */ }</code></pre>
+<div class="kp"><b>这就是操作STM32寄存器的全部秘密！</b>GPIOE->BSRR = (1<<5) 就是把PE5置1，本质就是位运算。</div>
+<h3>位域（Bit Field）</h3>
+<p>在结构体里按位定义成员，直接操作寄存器的某几位：</p>
+<pre><code>typedef struct {
+    uint32_t MODE0 : 2;   // 占2位
+    uint32_t MODE1 : 2;
+    uint32_t MODE2 : 2;
+    // ...
+} GPIO_MODER_Type;
+
+// 直接给某两位赋值，不用手动移位
+((GPIO_MODER_Type*)&GPIOE->MODER)->MODE5 = 0b01;  // PE5设为输出</code></pre>
+`},
+ {id:'0-4',title:'0.4 内存与关键字',kp:['volatile告诉编译器别优化，每次都读内存','const只读，优化代码','static局部变量不销毁/限制作用域','栈(局部)堆(malloc)全局(静态区)四区'],content:`
+<h3>volatile：防止编译器优化</h3>
+<p>单片机里寄存器、中断里改的变量必须加volatile，否则编译器可能"优化"掉你的读取。</p>
+<pre><code>// 错误：编译器可能直接用寄存器缓存的值，不重新读GPIO
+int btn = GPIOA->IDR;
+
+// 正确：每次都从内存重新读
+volatile int btn = GPIOA->IDR;
+
+// 中断里改的变量也要volatile
+volatile uint8_t flag = 0;
+void EXTI0_IRQHandler(){ flag = 1; }  // 中断改
+int main(){ while(!flag); }           // 主循环等，没volatile会死循环优化掉</code></pre>
+<h3>const：只读</h3>
+<pre><code>const int MAX = 100;      // 值不能改
+const uint8_t *p;        // p指向的内容不能改，p本身可以变
+uint8_t * const p = &a;  // p不能改，指向的内容可以改</code></pre>
+<h3>static：两种作用</h3>
+<pre><code>// 1. 局部变量：函数退出后不销毁，值保留
+void count(){
+    static int n = 0;   // 只初始化一次
+    n++;
+    printf("%d ", n);   // 第一次1，第二次2，第三次3...
+}
+
+// 2. 全局变量/函数：限制只能在本.c文件用，防止重名
+static void myFunc(){}  // 别的.c文件调用不到</code></pre>
+<h3>内存四区</h3>
+<pre>栈区(Stack)：函数里的局部变量，自动分配释放，容量小(默认1KB)
+  ├─ 大数组放这里会栈溢出→HardFault！
+堆区(Heap)：malloc动态分配，要手动free，单片机一般不用
+全局/静态区：全局变量、static变量，程序运行期间一直在
+代码区：Flash里的程序指令</pre>
+<div class="warn-box">⚠️ <b>单片机大忌：</b>别在函数里开 <code>uint8_t buf[1024]</code> 这种大数组，会撑爆栈！放全局变量里。</div>
+`},
+ {id:'0-5',title:'0.5 预处理与宏',kp:['#define宏定义常量和函数','#ifdef/#ifndef条件编译防重复包含','宏不是函数，注意括号','模块化：.h声明 .c实现'],content:`
+<h3>#define 宏</h3>
+<pre><code>// 定义常量
+#define PI 3.14159
+#define LED_PIN 5
+
+// 定义"函数式宏"，注意加括号！
+#define SQUARE(x)  ((x)*(x))    // 每个参数和整体都要加括号
+#define MAX(a,b)   ((a)>(b)?(a):(b))
+
+// 寄存器位操作宏（STM32常用）
+#define SET_BIT(reg, bit)   ((reg) |=  (1 << (bit)))
+#define CLR_BIT(reg, bit)   ((reg) &= ~(1 << (bit)))
+#define READ_BIT(reg, bit)  ((reg) &   (1 << (bit)))</code></pre>
+<div class="warn-box">⚠️ <b>宏不加括号的坑：</b><code>#define SQUARE(x) x*x</code>，调用 <code>SQUARE(1+2)</code> 会变成 <code>1+2*1+2=5</code> 而不是9。所以必须写成 <code>((x)*(x))</code>。</div>
+<h3>条件编译</h3>
+<pre><code>// 头文件保护，防止重复包含
+#ifndef __MY_H
+#define __MY_H
+// 头文件内容
+#endif
+
+// 调试开关
+#define DEBUG 1
+#if DEBUG
+  printf("debug info\\n");
+#endif</code></pre>
+<h3>模块化：.h + .c</h3>
+<pre>led.h  → 声明：extern void LED_Init(void);
+led.c  → 实现：void LED_Init(void){ ... }
+main.c → #include "led.h" 然后调用 LED_Init()</pre>
+<div class="kp"><b>头文件只写声明，不写定义：</b>变量用 <code>extern</code> 声明，定义放.c里，否则多个文件包含会重复定义报错。</div>
+`}
+]},
 /* ===== 第1章 嵌入式入门 ===== */
 {id:1,ico:'🔌',title:'第1章 嵌入式入门认知',desc:'单片机是什么、能干嘛、你的板子',lessons:[
  {id:'1-1',title:'1.1 单片机 vs 电脑：到底啥是嵌入式',kp:['单片机=一台超精简的电脑，CPU+内存+外设全在一个芯片里','嵌入式=把单片机嵌进设备里让它干活，看不见但无处不在','你的空调、洗衣机、路由器里都有单片机'],content:`
@@ -2941,6 +3147,370 @@ NC    ────→ 常闭触点（通电断开）
 6. 示波器/逻辑分析仪：看实际波形，软件硬件一目了然
 7. 百度/谷歌报错信息：别人大概率踩过同样的坑</pre>
 `}
+]},
+/* ===== 第31章 综合项目1：多路传感器采集+RS485上传 ===== */
+{id:31,ico:'🏭',title:'第31章 项目：多路传感器+485上传',desc:'从Demo到能落地的工程代码',lessons:[
+ {id:'31-1',title:'31.1 需求与整体架构',kp:['需求：3路传感器采集+RS485定时上传+异常自恢复','分层：驱动层→采集层→通信层→主循环','看门狗+超时重传防死机','区分Demo代码和工程代码'],content:`
+<h3>项目需求</h3>
+<p>采集3路传感器（温度DS18B20、湿度DHT11、光照ADC），每5秒通过RS485(Modbus RTU)上传到上位机。要求：<b>传感器掉线不能导致整机死机，通信异常自动重试，死机自动复位</b>。</p>
+<h3>整体架构（分层设计）</h3>
+<pre>┌─────────────────────────────────┐
+│         main.c 主循环            │
+│   状态机: 采集→打包→上传→休眠     │
+├─────────────────────────────────┤
+│  采集层  │  通信层  │  系统层     │
+│ sensor.c │ rs485.c │ wdg/time.c  │
+├─────────────────────────────────┤
+│           驱动层(HAL)            │
+│   GPIO / ADC / UART / DMA       │
+└─────────────────────────────────┘</pre>
+<h3>Demo代码 vs 工程代码</h3>
+<table>
+<tr><th>Demo能跑</th><th>工程能用</th></tr>
+<tr><td>while(1)直接读传感器</td><td>采集失败要返回错误码，不能卡死</td></tr>
+<tr><td>传感器在线假设一直在线</td><td>掉线检测+超时跳过+下次重试</td></tr>
+<tr><td>串口发完就不管</td><td>等待应答+超时重传+CRC校验</td></tr>
+<tr><td>没有看门狗</td><td>独立看门狗IWDG，超时自动复位</td></tr>
+<tr><td>全局变量随便用</td><td>模块化+静态变量+接口函数</td></tr>
+</table>
+<div class="kp"><b>核心思想：</b>假设任何外设都可能出错，代码要能"优雅降级"——一路传感器坏了，其他路照常工作并上传。</div>
+`},
+ {id:'31-2',title:'31.2 分步实现：采集+异常处理',kp:['每路采集函数返回状态码','用结构体存数据和状态','失败不阻塞，标记错误继续','看门狗在主循环喂'],content:`
+<h3>第1步：定义数据结构</h3>
+<pre><code>typedef struct {
+    int16_t  temp;       // 温度×10，避免浮点
+    uint8_t  humi;       // 湿度
+    uint16_t light;      // 光照ADC值
+    uint8_t  status;     // 0正常 1温度错 2湿度错 4光照错
+} SensorData_t;
+
+static SensorData_t g_data;  // 全局采集结果</code></pre>
+<h3>第2步：采集函数返回状态</h3>
+<pre><code>// 采集温度，返回0成功 非0失败
+uint8_t read_temp(int16_t *out)
+{
+    if(DS18B20_Start() != 0) return 1;  // 启动失败
+    HAL_Delay(750);                      // 转换时间
+    if(DS18B20_Read(out) != 0) return 2; // 读失败
+    return 0;
+}
+
+// 主循环里的采集逻辑
+void sensor_collect(void)
+{
+    g_data.status = 0;
+    int16_t t;
+    if(read_temp(&t) == 0) g_data.temp = t;
+    else { g_data.status |= 1; g_data.temp = -999; }  // 标记错误，不卡死
+
+    uint8_t h;
+    if(dht11_read(&h) == 0) g_data.humi = h;
+    else { g_data.status |= 2; g_data.humi = 0; }
+
+    g_data.light = read_adc_light();  // ADC一般不会失败
+}</code></pre>
+<h3>第3步：看门狗防死机</h3>
+<pre><code>// 初始化独立看门狗，超时约2秒
+MX_IWDG_Init();  // CubeMX配置，超时2000ms
+
+int main(void)
+{
+    HAL_Init();
+    SystemClock_Config();
+    MX_GPIO_Init(); MX_ADC1_Init(); MX_USART2_UART_Init();
+    MX_IWDG_Init();
+
+    while(1)
+    {
+        sensor_collect();
+        rs485_upload(&g_data);
+        HAL_IWDG_Refresh(&hiwdg);  // 喂狗，2秒内必须跑到这里
+        HAL_Delay(5000);
+    }
+}</code></pre>
+<div class="warn-box">⚠️ <b>喂狗位置很关键：</b>只能在主循环喂，不能在中断里喂。如果程序卡死在某个函数，看门狗2秒后自动复位，设备自恢复。</div>
+`},
+ {id:'31-3',title:'31.3 分步实现：RS485上传+重传',kp:['Modbus RTU帧: 地址+功能码+数据+CRC','发送后等应答，超时重传最多3次','失败不影响下一次采集','DMA发送减少CPU占用'],content:`
+<h3>Modbus RTU上传帧格式</h3>
+<pre>从机地址(1B) + 功能码(1B) + 数据(NB) + CRC16(2B)
+
+例：上传温度255(0x00FF)
+01 06 00 00 00 FF CRC_L CRC_H
+│  │  └──┘ └──────┘
+│  │  寄存器地址  数据
+│  └─ 功能码06=写单个寄存器
+└─ 从机地址1</pre>
+<h3>带重传的发送函数</h3>
+<pre><code>#define RS485_RETRY  3
+#define RS485_TIMEOUT 200  // ms
+
+uint8_t rs485_upload(SensorData_t *d)
+{
+    uint8_t buf[16];
+    uint8_t len = pack_modbus(buf, d);  // 打包数据+CRC
+
+    for(uint8_t retry=0; retry<RS485_RETRY; retry++)
+    {
+        RS485_TX();
+        HAL_UART_Transmit_DMA(&huart2, buf, len);
+        // 等待应答
+        uint8_t resp[8];
+        HAL_StatusTypeDef r = HAL_UART_Receive(&huart2, resp, 5, RS485_TIMEOUT);
+        RS485_RX();
+
+        if(r == HAL_OK && check_crc(resp, 5)) return 0;  // 成功
+        HAL_Delay(100);  // 重试间隔
+    }
+    return 1;  // 3次都失败，返回错误但不崩溃
+}</code></pre>
+<div class="tip">💡 <b>工程细节：</b>重传次数有限（3次），避免死循环。失败返回错误码，主循环记录后继续下次采集，不会因为一次通信失败就整机停摆。</div>
+<h3>工程风险点清单</h3>
+<ol>
+<li><b>传感器750ms转换阻塞：</b>用定时器非阻塞等待，别用HAL_Delay占CPU</li>
+<li><b>RS485切换方向延时：</b>发送完等最后一个字节发完再切接收，否则丢字节</li>
+<li><b>CRC计算：</b>用查表法快，别在中断里算</li>
+<li><b>浮点运算：</b>F407有FPU但仍慢，温度用int×10代替float</li>
+<li><b>全局变量并发：</b>如果后续上RTOS，采集和上传要加互斥锁</li>
+</ol>
+`}
+]},
+/* ===== 第32章 综合项目2：FreeRTOS多任务实例 ===== */
+{id:32,ico:'🌀',title:'第32章 项目：FreeRTOS多任务',desc:'任务+队列+信号量+防死锁',lessons:[
+ {id:'32-1',title:'32.1 需求与任务划分',kp:['需求：采集+显示+通信+按键四任务并发','任务划分按"功能"不是"外设"','队列传数据，信号量同步','优先级：通信>采集>显示'],content:`
+<h3>需求</h3>
+<p>把第31章的项目改成RTOS多任务：<b>采集任务、显示任务(OLED)、通信任务(RS485)、按键任务</b>四个任务并发运行，互不阻塞。</p>
+<h3>任务划分</h3>
+<table>
+<tr><th>任务</th><th>优先级</th><th>周期</th><th>职责</th></tr>
+<tr><td>采集Task</td><td>中(2)</td><td>5s</td><td>读传感器→发队列</td></tr>
+<tr><td>显示Task</td><td>低(1)</td><td>1s</td><td>从队列取→刷OLED</td></tr>
+<tr><td>通信Task</td><td>高(3)</td><td>5s</td><td>从队列取→RS485上传</td></tr>
+<tr><td>按键Task</td><td>中(2)</td><td>20ms</td><td>扫描按键→发信号量</td></tr>
+</table>
+<div class="kp"><b>任务间通信原则：</b>不用全局变量！用队列传数据（生产者→消费者），用信号量做事件同步（按键→某个任务响应）。</div>
+<h3>为什么不用全局变量</h3>
+<pre>全局变量的坑：
+  采集Task写temp=25
+  通信Task读temp，读到一半(2)，采集Task又写成30
+  通信Task读到2和0的混合 → 数据错乱！
+
+队列的好处：
+  xQueueSend() 是原子操作，不会读到一半</pre>
+`},
+ {id:'32-2',title:'32.2 队列+信号量实现',kp:['队列xQueueCreate/Send/Receive','信号量xSemaphoreGive/Take','互斥锁保护共享资源','任务必须有阻塞(vTaskDelay)'],content:`
+<h3>创建队列和信号量</h3>
+<pre><code>QueueHandle_t xSensorQueue;   // 传感器数据队列
+SemaphoreHandle_t xKeySem;     // 按键信号量
+
+void app_create(void)
+{
+    // 队列：最多存5个SensorData_t
+    xSensorQueue = xQueueCreate(5, sizeof(SensorData_t));
+    // 二值信号量：按键事件
+    xKeySem = xSemaphoreCreateBinary();
+
+    xTaskCreate(task_sensor, "sensor", 256, NULL, 2, NULL);
+    xTaskCreate(task_comm,   "comm",   256, NULL, 3, NULL);
+    xTaskCreate(task_key,    "key",    128, NULL, 2, NULL);
+}</code></pre>
+<h3>采集任务（生产者）</h3>
+<pre><code>void task_sensor(void *arg)
+{
+    SensorData_t data;
+    while(1)
+    {
+        sensor_collect(&data);
+        // 发到队列，不阻塞(等0ms)，满了就丢旧的
+        xQueueSend(xSensorQueue, &data, 0);
+        vTaskDelay(pdMS_TO_TICKS(5000));  // 必须阻塞！
+    }
+}</code></pre>
+<h3>通信任务（消费者）</h3>
+<pre><code>void task_comm(void *arg)
+{
+    SensorData_t data;
+    while(1)
+    {
+        // 阻塞等队列，最多等1秒
+        if(xQueueReceive(xSensorQueue, &data, pdMS_TO_TICKS(1000)) == pdTRUE)
+        {
+            rs485_upload(&data);
+        }
+        // 没数据就继续等，不占CPU
+    }
+}</code></pre>
+<h3>按键任务（信号量同步）</h3>
+<pre><code>void task_key(void *arg)
+{
+    while(1)
+    {
+        if(key_pressed()){
+            xSemaphoreGive(xKeySem);  // 发信号量
+        }
+        vTaskDelay(pdMS_TO_TICKS(20));  // 消抖
+    }
+}
+
+// 其他任务等按键
+void task_display(void *arg)
+{
+    while(1)
+    {
+        // 阻塞等按键信号量
+        if(xSemaphoreTake(xKeySem, portMAX_DELAY) == pdTRUE){
+            switch_page();  // 按了就翻页
+        }
+    }
+}</code></pre>
+`},
+ {id:'32-3',title:'32.3 工程注意事项与防死锁',kp:['高优先级任务不能一直占CPU','互斥锁加了必须释放','堆栈大小要够','看门狗在空闲任务喂'],content:`
+<h3>坑1：优先级反转与饿死</h3>
+<pre>错误：高优先级任务里死循环不阻塞
+void task_high(void*){
+    while(1){ do_something(); }  // 没vTaskDelay！
+}
+→ 低优先级任务永远抢不到CPU → 饿死！
+
+正确：每个任务必须有阻塞
+vTaskDelay() 或 xQueueReceive(,,timeout)
+让CPU有机会切到其他任务</pre>
+<h3>坑2：互斥锁死锁</h3>
+<pre><code>// 错误：加锁后return忘了释放
+void func(void){
+    xSemaphoreTake(xMutex, portMAX_DELAY);
+    if(error) return;            // 直接return，锁没释放！
+    xSemaphoreGive(xMutex);
+}
+→ 其他任务永远拿不到锁 → 死锁
+
+// 正确：所有出口都释放
+void func(void){
+    xSemaphoreTake(xMutex, portMAX_DELAY);
+    if(error){ xSemaphoreGive(xMutex); return; }
+    // ...
+    xSemaphoreGive(xMutex);
+}</code></pre>
+<h3>坑3：堆栈溢出</h3>
+<p>任务栈太小，开大数组会溢出→系统崩溃。<code>uxTaskGetStackHighWaterMark()</code> 查看剩余栈：</p>
+<pre><code>// 在任务里打印栈剩余
+UBaseType_t left = uxTaskGetStackHighWaterMark(NULL);
+printf("stack left: %u words\\n", left);
+// 小于50就加大任务栈深度</code></pre>
+<h3>坑4：看门狗与RTOS</h3>
+<p>用RTOS时，看门狗不能在某个任务喂（任务卡死了看门狗还在喂=没用）。<b>应该在空闲任务(Idle Hook)里喂</b>，或者用定时器统一监控所有任务。</p>
+<pre><code>// 空闲钩子喂狗（所有任务都不跑时才进空闲）
+void vApplicationIdleHook(void)
+{
+    HAL_IWDG_Refresh(&hiwdg);
+}</code></pre>
+<div class="warn-box">⚠️ <b>工程级看门狗：</b>最好每个任务设一个"心跳标志"，看门狗任务检查所有心跳，有任务超时才复位。这比单纯在Idle喂狗更可靠。</div>
+`}
+]},
+/* ===== 第33章 新手误区提醒专栏 ===== */
+{id:33,ico:'🚫',title:'第33章 新手误区提醒专栏',desc:'这些坑别踩',lessons:[
+ {id:'33-1',title:'33.1 学习路线误区',kp:['跳过C直接学单片机=空中楼阁','只会CubeMX点鼠标不算学会','Demo跑通≠项目完成','先学寄存器再学HAL理解更深'],content:`
+<h3>误区1：跳过C语言直接学STM32</h3>
+<div class="bug-box">
+<p><b>❌ 错误认知：</b>"C语言太难，我直接学STM32点灯就行"</p>
+<p><b>💡 真相：</b>STM32代码全是C写的。指针、结构体、位运算看不懂，HAL库的<code>HAL_GPIO_Init(&hgpio, &InitStruct)</code>你都不知道在干嘛。到时候改个参数都不会，遇到bug完全懵。</p>
+<p><b>✅ 正确做法：</b>先把第0章C语言过一遍，重点掌握指针、结构体、位运算、volatile。不用精通，能看懂就行。</p>
+</div>
+
+<h3>误区2：只会CubeMX点鼠标就等于学会STM32</h3>
+<div class="bug-box">
+<p><b>❌ 错误认知：</b>"CubeMX图形化配置，点点鼠标就能生成代码，不用学原理"</p>
+<p><b>💡 真相：</b>CubeMX只是帮你生成初始化代码。时钟为什么配168M？GPIO为什么选推挽？串口波特率怎么算的？这些原理不懂，生成的代码出问题你根本查不了。</p>
+<p><b>✅ 正确做法：</b>CubeMX是工具不是替代品。先用寄存器版点灯理解原理，再用CubeMX提高效率。知其然更知其所以然。</p>
+</div>
+
+<h3>误区3：Demo跑通就等于项目完成</h3>
+<div class="bug-box">
+<p><b>❌ 错误认知：</b>"LED闪了、串口通了，我的项目做完了"</p>
+<p><b>💡 真相：</b>Demo只证明"能跑"，不证明"能用"。传感器掉线会不会死机？通信失败会不会卡死？程序跑飞了能不能自恢复？这些不考虑，项目上线三天两头出问题。</p>
+<p><b>✅ 正确做法：</b>参考第31/32章的工程化思路：异常处理、看门狗、超时重传、防死锁。Demo跑通只是开始。</p>
+</div>
+
+<h3>误区4：先学HAL还是先学寄存器？</h3>
+<div class="bug-box">
+<p><b>❌ 极端1：</b>"寄存器过时了，直接学HAL库"</p>
+<p><b>❌ 极端2：</b>"HAL库封装太多，必须从寄存器学起"</p>
+<p><b>✅ 正确做法：</b>先看寄存器操作1~2个外设（GPIO+串口），理解底层原理；然后用HAL库开发，效率高。遇到HAL搞不定的（如精确时序）再回寄存器。两者结合，不纠结。</p>
+</div>
+`},
+ {id:'33-2',title:'33.2 代码与硬件误区',kp:['GPIO直接带继电器会烧IO','中断里写太多逻辑','不看数据手册瞎配寄存器','不接共地通信失败'],content:`
+<h3>误区5：GPIO能直接驱动继电器/电机</h3>
+<div class="bug-box">
+<p><b>❌ 错误：</b>GPIO输出直接接继电器线圈</p>
+<p><b>💡 真相：</b>GPIO最大输出才25mA，继电器线圈要几十mA，<b>轻则不工作，重则烧IO口甚至烧芯片</b>。</p>
+<p><b>✅ 正确：</b>必须加三极管驱动（第29章讲过），或者直接用继电器模块。</p>
+</div>
+
+<h3>误区6：中断服务函数里写很多逻辑</h3>
+<div class="bug-box">
+<p><b>❌ 错误：</b>在中断里printf、延时、复杂计算</p>
+<p><b>💡 真相：</b>中断要<b>快进快出</b>！在中断里延时会导致其他中断无法响应，printf会阻塞。中断只做标记（设个flag），主循环里处理逻辑。</p>
+<p><b>✅ 正确：</b></p>
+<pre><code>volatile uint8_t key_flag = 0;
+void EXTI0_IRQHandler(){
+    if(__HAL_GPIO_EXTI_GET_IT(GPIO_PIN_0)){
+        key_flag = 1;              // 只设标志
+        __HAL_GPIO_EXTI_CLEAR_IT(GPIO_PIN_0);
+    }
+}
+// 主循环里处理
+while(1){
+    if(key_flag){ key_flag=0; do_key_work(); }
+}</code></pre>
+</div>
+
+<h3>误区7：不看数据手册瞎配寄存器</h3>
+<div class="bug-box">
+<p><b>❌ 错误：</b>抄别人代码，寄存器值直接照搬</p>
+<p><b>💡 真相：</b>不同型号芯片寄存器不一样，F103和F407的GPIO寄存器布局就不同。照搬很可能配错。</p>
+<p><b>✅ 正确：</b>遇到不确定的寄存器，打开数据手册(RM)查对应位的含义。养成查手册的习惯，这是嵌入式工程师的基本素养。</p>
+</div>
+
+<h3>误区8：通信不共地</h3>
+<div class="bug-box">
+<p><b>❌ 错误：</b>串口/485只接信号线，不接GND</p>
+<p><b>💡 真相：</b>信号是相对GND的电压差，没有共地，电平参考点不同，通信必然失败甚至烧芯片。</p>
+<p><b>✅ 正确：</b>所有通信必须共地！GND-GND必须连。</p>
+</div>
+`},
+ {id:'33-3',title:'33.3 调试与心态误区',kp:['出问题先怀疑芯片/编译器','不看返回值和错误码','调试全靠printf','急于求成不记录'],content:`
+<h3>误区9：出问题先怀疑芯片或编译器</h3>
+<div class="bug-box">
+<p><b>❌ 错误：</b>"程序不对，肯定是芯片坏了/Keil有bug"</p>
+<p><b>💡 真相：</b>99%的问题是自己代码写错了。没开时钟、接错线、数组越界、变量没初始化。芯片和编译器比你想象的靠谱得多。</p>
+<p><b>✅ 正确：</b>先查自己的代码（第30章排查步骤），最后才怀疑硬件。</p>
+</div>
+
+<h3>误区10：不看函数返回值</h3>
+<div class="bug-box">
+<p><b>❌ 错误：</b><code>HAL_UART_Transmit(&huart1, buf, len, 100);</code> 写完就不管</p>
+<p><b>💡 真相：</b>HAL库函数都有返回值（HAL_OK/HAL_ERROR/HAL_BUSY/HAL_TIMEOUT）。不检查返回值，出了问题不知道是超时还是错误。</p>
+<p><b>✅ 正确：</b></p>
+<pre><code>HAL_StatusTypeDef r = HAL_UART_Transmit(&huart1, buf, len, 100);
+if(r != HAL_OK){
+    printf("uart send error: %d\\n", r);  // 至少打印错误
+    // 处理错误：重试/上报/复位
+}</code></pre>
+</div>
+
+<h3>误区11：调试只用printf</h3>
+<div class="bug-box">
+<p><b>❌ 错误：</b>出问题就疯狂加printf</p>
+<p><b>💡 真相：</b>printf会改变时序（串口发送慢），有些时序相关的bug加了printf就不出现了（Heisenbug）。而且中断里不能用printf。</p>
+<p><b>✅ 正确：</b>学会用调试器（断点+单步+观察变量），再配合示波器/逻辑分析仪看波形。printf只是辅助。</p>
+</div>
+
+<h3>误区12：急于求成，不做笔记</h3>
+<div class="bug-box">
+<p><b>❌ 错误：</b>疯狂追进度，学完就忘，踩过的坑重复踩</p>
+<p><b>💡 真相：</b>嵌入式知识杂，不记录很快忘。今天解决的串口乱码，下个月可能又踩一遍。</p>
+<p><b>✅ 正确：</b>每解决一个问题，记下来：现象、原因、解决方法。这本"踩坑笔记"就是你最值钱的资产。（这个APP的第30章就是帮你整理好的踩坑笔记）</p>
+</div>
+`}
 ]}
 ];
 
@@ -3135,7 +3705,21 @@ const QZ = [
 {t:30,q:'HardFault死机最常见的原因是？',opts:['芯片坏了','栈溢出（函数里开大数组）','电源不稳','温度太高'],a:1,e:'90%的HardFault是栈溢出，函数里定义大数组(如uint8_t buf[1024])撑爆了默认1KB栈。'},
 {t:30,q:'中断服务函数不执行，不可能的原因是？',opts:['没开NVIC','中断函数名拼错','没清中断标志','GPIO没开时钟'],a:3,e:'GPIO时钟影响的是外设不是中断。中断不进通常是没开NVIC、函数名错、没清标志。'},
 {t:30,q:'I2C通信没有应答(HAL_TIMEOUT)，最先查什么？',opts:['换芯片','SDA/SCL上拉电阻和设备地址','加大波特率','换线'],a:1,e:'I2C必须有4.7k上拉，且地址要注意7位/8位区别（HAL用8位左移后的地址）。'},
-{t:30,q:'编译报Symbol already defined重复定义，怎么解决？',opts:['删掉一个','头文件里变量声明加extern，变量定义放.c','重命名','不用管'],a:1,e:'头文件里只能写声明(extern)，变量定义要放在.c文件里，否则多个文件包含时重复定义。'}
+{t:30,q:'编译报Symbol already defined重复定义，怎么解决？',opts:['删掉一个','头文件里变量声明加extern，变量定义放.c','重命名','不用管'],a:1,e:'头文件里只能写声明(extern)，变量定义要放在.c文件里，否则多个文件包含时重复定义。'},
+// ============ 改错题（lvl:2） ============
+{t:0,lvl:2,q:'找出下面代码的错误：<pre><code>int main(void)\n{\n    int arr[3] = {1,2,3};\n    int sum = 0;\n    for(int i=0; i<=3; i++){\n        sum += arr[i];\n    }\n    return 0;\n}</code></pre>',opts:['第4行 for 循环条件 i<=3 越界','数组初始化错了','sum没初始化','return 0 多余'],a:0,e:'数组arr只有3个元素(下标0~2)，循环条件i<=3会访问arr[3]，数组越界→可能HardFault。应改成i<3。'},
+{t:0,lvl:2,q:'找出下面代码的错误：<pre><code>void send_data(uint8_t *data)\n{\n    uint8_t buf[1024];\n    for(int i=0;i<1024;i++) buf[i]=data[i];\n    HAL_UART_Transmit(&huart1, buf, 1024, 1000);\n}</code></pre>',opts:['for循环写错了','buf[1024]太大放栈里会栈溢出','HAL_UART_Transmit参数错','data指针没用'],a:1,e:'函数里定义uint8_t buf[1024]占1KB栈空间，STM32默认栈才1KB，会栈溢出→HardFault。应改成全局变量或减小缓冲区。'},
+{t:0,lvl:2,q:'找出下面中断代码的错误：<pre><code>void EXTI0_IRQHandler(void)\n{\n    HAL_Delay(100);\n    printf("key pressed\\n");\n    HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_0);\n}</code></pre>',opts:['没清中断标志','中断里用了HAL_Delay和printf，会阻塞','函数名错了','参数不对'],a:1,e:'中断要快进快出！HAL_Delay依赖SysTick中断，printf会阻塞，在EXTI中断里调用可能导致死机或丢中断。中断里只设标志，主循环处理。'},
+{t:0,lvl:2,q:'找出下面代码的错误：<pre><code>int a = 10;\nint *p;\n*p = 20;\nprintf("%d", a);</code></pre>',opts:['printf格式错','指针p没初始化就解引用，野指针','a定义错了','少了return'],a:1,e:'指针p定义后没赋值（野指针），直接*p=20会写到随机内存地址→HardFault。应先p=&a再*p=20。'},
+{t:0,lvl:2,q:'找出下面GPIO代码的错误（F407点灯）：<pre><code>void LED_Init(void)\n{\n    GPIO_InitTypeDef GPIO_InitStruct;\n    GPIO_InitStruct.Pin = GPIO_PIN_5;\n    GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;\n    HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);\n    HAL_GPIO_WritePin(GPIOE, GPIO_PIN_5, GPIO_PIN_RESET);\n}</code></pre>',opts:['Pin配置错了','没开GPIOE时钟','Mode错了','WritePin参数错'],a:1,e:'使用GPIO前必须开时钟！缺少__HAL_RCC_GPIOE_CLK_ENABLE()，GPIO不工作。这是新手最高频错误。'},
+{t:0,lvl:2,q:'找出下面串口接收代码的错误：<pre><code>uint8_t rx_buf[10];\nvoid uart_rx(void)\n{\n    HAL_UART_Receive_IT(&huart1, rx_buf, 10);\n}\nvoid HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)\n{\n    printf("recv: %s\\n", rx_buf);\n    HAL_UART_Receive_IT(&huart1, rx_buf, 10);\n}</code></pre>',opts:['回调函数名错了','printf输出字符串没确保\\0结尾','接收长度错了','不需要重新开启接收'],a:1,e:'rx_buf是uint8_t数组，用%s打印需要\\0结尾。收到10字节后没有手动加\\0，printf会越界读。应在回调里rx_buf[10]=0或用%c逐个打印。'},
+{t:15,lvl:2,q:'找出下面FreeRTOS代码的错误：<pre><code>void task_high(void *arg)\n{\n    while(1)\n    {\n        do_work();\n    }\n}\nvoid task_low(void *arg)\n{\n    while(1)\n    {\n        vTaskDelay(pdMS_TO_TICKS(1000));\n        printf("low\\n");\n    }\n}</code></pre>',opts:['task_low没传参数','task_high没有阻塞调用，会饿死低优先级任务','printf不能用','任务函数返回值错'],a:1,e:'高优先级任务task_high的while(1)里没有任何阻塞(vTaskDelay等)，会一直占CPU，低优先级的task_low永远抢不到CPU→饿死。每个任务必须有阻塞。'},
+// ============ 编程思考题（lvl:3，type:think） ============
+{t:1,lvl:3,type:'think',q:'需求：板子上有一个LED(PE5，低电平点亮)和一个按键(PA0，按下接地)。请构思程序逻辑：按下按键LED翻转状态，松手不变化，要求消抖。写出你的思路（不需要完整代码，写关键步骤即可）。',e:'参考思路：1)初始化PE5推挽输出、PA0上拉输入；2)主循环里读PA0，用延时消抖(检测到低电平后延时20ms再确认)；3)确认按下后翻转GPIOE->ODR的bit5(或用HAL_GPIO_TogglePin)；4)等待按键松开(PA0变高)再继续，避免重复触发。进阶：用定时器中断做非阻塞消抖。'},
+{t:1,lvl:3,type:'think',q:'需求：用定时器实现每500ms翻转一次LED，不能用HAL_Delay阻塞主循环。写出你的实现思路。',e:'参考思路：方案一(定时器中断)：配置TIM2定时500ms，使能更新中断，在TIM2_IRQHandler里翻转LED。方案二(PWM)：用定时器PWM输出，占空比50%，频率2Hz(周期500ms)。方案三(SysTick)：用SysTick计时，主循环里判断时间到了就翻转。重点：中断里只翻转引脚，不做复杂操作。'},
+{t:0,lvl:3,type:'think',q:'需求：定义一个结构体存储学生信息(姓名、年龄、成绩数组[3门])，写一个函数计算并返回平均分。写出你的代码思路。',e:'参考思路：\ntypedef struct {\n    char name[20];\n    uint8_t age;\n    float score[3];\n} Student_t;\nfloat avg_score(Student_t *s) {\n    float sum=0;\n    for(int i=0;i<3;i++) sum += s->score[i];\n    return sum/3;\n}\n要点：用指针传结构体(效率高)，函数返回float。注意结构体里的数组大小固定。'},
+{t:15,lvl:3,type:'think',q:'需求：FreeRTOS里有两个任务，采集任务把数据放到队列，显示任务从队列取数据显示。如果采集速度比显示快，队列满了怎么办？请设计合理的处理策略。',e:'参考思路：1)xQueueSend设置超时为0(不阻塞)，队列满就丢弃最新数据(覆盖策略)，保证采集任务不被阻塞；2)队列深度设大一点(如10个)缓冲；3)如果数据重要不能丢，用xQueueSend阻塞等待，但要设最大超时避免采集任务卡死；4)也可以用互斥锁+全局环形缓冲区，灵活控制。核心原则：高优先级任务(采集)不能被低优先级(显示)拖死。'},
+{t:31,lvl:3,type:'think',q:'需求：多路传感器采集项目中，某一路传感器(I2C温湿度)偶尔无应答导致整个采集卡住。请设计异常处理方案，保证整机不死机。',e:'参考思路：1)所有传感器读取函数都设超时(HAL库的timeout参数)，超时返回错误码；2)采集函数收到错误码后，标记该路数据无效(如设为-999)，不阻塞继续采集下一路；3)连续N次失败后，尝试重新初始化该传感器(软件复位)；4)如果还失败，跳过该路上传其他数据；5)主循环看门狗保证整机不死。关键：假设每个外设都可能失败，代码要优雅降级。'}
 ];
 
 /* ============================================================
@@ -3143,6 +3727,8 @@ const QZ = [
    ============================================================ */
 const LS={get:(k,d)=>{try{return JSON.parse(localStorage.getItem(k))??d}catch(e){return d}},set:(k,v)=>localStorage.setItem(k,JSON.stringify(v))};
 let st={done:LS.get('m_done',{}),fav:LS.get('m_fav',[]),qz:LS.get('m_qz',{wrong:{},seen:{},right:0,total:0,due:{}}),curChap:null,curLesson:null};
+// 迁移：已完成第1章的老用户，自动标记第0章(C语言)为已完成，避免回锁
+if(st.done['1-1'] && !st.done['0-1']){CHAPTERS[0].lessons.forEach(l=>st.done[l.id]=1);LS.set('m_done',st.done);}
 let quizState=null;
 
 /* 渲染首页章节列表 */
@@ -3301,9 +3887,12 @@ function startPractice(mode){
   else if(mode==='review'){const today=fmtDate(new Date());pool=Object.keys(st.qz.due).filter(i=>st.qz.due[i]<=today).map(Number);}
   else if(mode==='exam'){const a=QZ.map((q,i)=>i);pool=a.sort(()=>Math.random()-.5).slice(0,Math.min(20,a.length));}
   else if(mode==='daily'){const today=fmtDate(new Date());const wrong=Object.keys(st.qz.wrong).map(Number).sort((a,b)=>st.qz.wrong[b]-st.qz.wrong[a]);const due=Object.keys(st.qz.due).filter(i=>st.qz.due[i]<=today).map(Number);const seen=new Set([...wrong,...due]);const fresh=QZ.map((q,i)=>i).filter(i=>!st.qz.seen[i]);pool=[...due,...wrong,...fresh].filter((v,k,a)=>a.indexOf(v)===k).slice(0,10);}
+  else if(mode==='level1')pool=QZ.map((q,i)=>(!q.lvl||q.lvl===1)?i:-1).filter(i=>i>=0);
+  else if(mode==='level2')pool=QZ.map((q,i)=>q.lvl===2?i:-1).filter(i=>i>=0);
+  else if(mode==='level3')pool=QZ.map((q,i)=>q.lvl===3?i:-1).filter(i=>i>=0);
   if(!pool.length){alert(mode==='wrong'?'还没有错题，多做几道就有了':mode==='review'?'暂无到期复习题':'题库为空');return;}
   quizState={pool,idx:0,mode,correct:0};
-  document.getElementById('quizTitle').textContent={order:'顺序练习',random:'随机刷题',wrong:'错题本',review:'艾宾浩斯复习',exam:'模拟考试(20题)',daily:'每日10题'}[mode];
+  document.getElementById('quizTitle').textContent={order:'顺序练习',random:'随机刷题',wrong:'错题本',review:'艾宾浩斯复习',exam:'模拟考试(20题)',daily:'每日10题',level1:'🌱 基础题',level2:'🐛 改错题',level3:'💡 编程思考题'}[mode];
   showQuiz();
   showPage('page-quiz');
 }
@@ -3322,10 +3911,10 @@ function showQuiz(){
   const q=QZ[i];
   document.getElementById('quizProg').textContent=`${quizState.idx+1}/${quizState.pool.length}`;
   const area=document.getElementById('quizArea');
-  let html=`<div class="quiz-card"><span class="qtag">${CHAPTERS.find(c=>c.id===q.t)?.title||''} ${q.type==='write'?'·默写':q.type==='fill'?'·填空':''}</span>
+  let html=`<div class="quiz-card"><span class="qtag">${CHAPTERS.find(c=>c.id===q.t)?.title||''} ${q.type==='write'?'·默写':q.type==='fill'?'·填空':q.type==='think'?'·编程思考':q.lvl===2?'·改错题':''} ${q.lvl===1?'<span class="lvl lvl1">基础</span>':q.lvl===2?'<span class="lvl lvl2">改错</span>':q.lvl===3?'<span class="lvl lvl3">思考</span>':''}</span>
     <div class="qtxt">${quizState.idx+1}. ${q.q}</div>`;
-  if(q.type==='write'){
-    html+=`<textarea class="fill-input" id="fillAns" rows="3" placeholder="在此输入代码..."></textarea>`;
+  if(q.type==='write'||q.type==='think'){
+    html+=`<textarea class="fill-input" id="fillAns" rows="4" placeholder="${q.type==='think'?'写下你的实现思路，提交后查看参考答案...':'在此输入代码...'}"></textarea>`;
   }else if(q.type==='fill'){
     html+=`<input class="fill-input" id="fillAns" placeholder="输入答案...">`;
   }else{
@@ -3378,21 +3967,29 @@ function submitQuiz(ans){
 function checkFill(){
   if(quizState.submitted)return;
   const v=document.getElementById('fillAns').value.trim();
-  if(!v){alert('请输入答案');return;}
   const i=quizState.pool[quizState.idx];
   const q=QZ[i];
   let correct=false;
-  if(q.type==='write'){
+  if(q.type==='think'){
+    correct=true;  // 编程思考题为自评，提交即算完成
+  }else if(q.type==='write'){
+    if(!v){alert('请输入答案');return;}
     correct=q.groups.every(g=>g.some(s=>v.toLowerCase().replace(/\s+/g,'').includes(s.toLowerCase().replace(/\s+/g,''))));
   }else{
+    if(!v){alert('请输入答案');return;}
     correct=q.opts.some(o=>v===o);
   }
   submitQuiz(correct?0:1);
-  if(!correct){
+  if(!correct||q.type==='think'){
     const res=document.getElementById('qRes');
-    res.innerHTML='❌ 答案不对';
-    res.className='quiz-result show no';
-    document.getElementById('qExp').innerHTML+='<br><b>参考答案：</b>'+(q.type==='write'?q.e:q.opts[q.a]);
+    if(q.type==='think'){
+      res.innerHTML='✅ 已记录，参考思路见下方';
+      res.className='quiz-result show ok';
+    }else{
+      res.innerHTML='❌ 答案不对';
+      res.className='quiz-result show no';
+    }
+    document.getElementById('qExp').innerHTML+='<br><b>参考答案：</b>'+q.e.replace(/\n/g,'<br>');
     document.getElementById('qExp').classList.add('show');
   }
 }
@@ -3491,6 +4088,50 @@ function showPage(id){
   if(id==='page-prac'){renderPracChapters();updateStats();}
   if(id==='page-me'){updateStats();renderCheckin();renderReport();}
   if(id==='page-cards')showCard();
+  if(id==='page-roadmap')renderRoadmap();
+}
+
+/* ========== 学习路线 ========== */
+const ROADMAP_STAGES=[
+  {name:'阶段0 · C语言预热',ico:'📘',color:'#6366f1',ch:[0],desc:'单片机用到的C：指针、结构体、位运算、volatile'},
+  {name:'阶段1 · 入门与基础外设',ico:'🔌',color:'#10b981',ch:[1,2,3,4,5,6,7,8,9,10,11,12,13,14],desc:'从点灯到串口/I2C/SPI/定时器/ADC，裸机基础打牢'},
+  {name:'阶段2 · FreeRTOS',ico:'🌀',color:'#f59e0b',ch:[15],desc:'多任务并发，告别while(1)'},
+  {name:'阶段3 · 进阶外设与通信',ico:'🚀',color:'#0ea5e9',ch:[16,17,18,19,20,21,22,23,24,25,26],desc:'DMA/看门狗/RTC/低功耗/Flash/DAC/CAN/通信模块'},
+  {name:'阶段4 · 调试与硬件实战',ico:'🔧',color:'#ef4444',ch:[27,28,29,30],desc:'调试方法、时钟系统、硬件原理、踩坑排错'},
+  {name:'阶段5 · 综合项目与进阶',ico:'🏭',color:'#8b5cf6',ch:[31,32,33],desc:'传感器+485项目、FreeRTOS多任务项目、新手误区'}
+];
+function renderRoadmap(){
+  let totalLessons=0,doneLessons=0;
+  let html='';
+  ROADMAP_STAGES.forEach(stage=>{
+    const chs=stage.ch.map(id=>CHAPTERS.find(c=>c.id===id)).filter(Boolean);
+    let sTotal=0,sDone=0;
+    let chHtml='';
+    chs.forEach(ch=>{
+      const total=ch.lessons.length;
+      const done=ch.lessons.filter(l=>st.done[l.id]).length;
+      sTotal+=total;sDone+=done;
+      const pct=total?Math.round(done/total*100):0;
+      chHtml+=`<div class="rm-ch" onclick="openChapter(${CHAPTERS.indexOf(ch)})">
+        <div class="rm-ch-top"><span>${ch.ico} ${ch.title.replace(/第\d+章\s*/,'')}</span><span class="rm-count">${done}/${total}</span></div>
+        <div class="pbar sm"><span style="width:${pct}%;background:${stage.color}"></span></div>
+      </div>`;
+    });
+    totalLessons+=sTotal;doneLessons+=sDone;
+    const spct=sTotal?Math.round(sDone/sTotal*100):0;
+    html+=`<div class="rm-stage">
+      <div class="rm-stage-hd" style="border-left:4px solid ${stage.color}">
+        <div><b>${stage.ico} ${stage.name}</b><div class="rm-desc">${stage.desc}</div></div>
+        <div class="rm-pct">${spct}%</div>
+      </div>
+      <div class="rm-ch-list">${chHtml}</div>
+    </div>`;
+  });
+  const totalPct=totalLessons?Math.round(doneLessons/totalLessons*100):0;
+  html=`<div class="rm-overview">总进度 <b>${doneLessons}/${totalLessons}</b> 课 (${totalPct}%)</div>`+html;
+  document.getElementById('roadmapBody').innerHTML=html;
+  const rp=document.getElementById('roadProg');
+  if(rp)rp.style.width=totalPct+'%';
 }
 
 function goHome(){showPage('page-home');renderChapters();document.getElementById('searchInput').value='';document.getElementById('searchResult').innerHTML='';}
